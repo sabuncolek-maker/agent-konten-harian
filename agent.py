@@ -1,32 +1,38 @@
 import os
-
 from dotenv import load_dotenv
 from groq import Groq
 
 load_dotenv()
-
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
-
-def ask_agent(goal: str) -> str:
-    """Ask the LLM to make a first-step plan for the given goal."""
-    prompt = f"""
-Kamu adalah AI Agent pembuat konten.
+def ask_agent(goal: str, tool_result: str | None = None) -> str:
+    if tool_result is None:
+        prompt = f"""Kamu adalah AI Agent pembuat konten.
 
 Tujuan:
 {goal}
 
-Tentukan apa yang harus dilakukan untuk mencapai tujuan tersebut.
+Tool tersedia:
+- research_topic: mencari topik relevan.
 
-Jawab dengan:
-1. Tujuan
-2. Analisis singkat
-3. Langkah berikutnya
-""".strip()
+Tentukan langkah berikutnya.
+Jika membutuhkan riset, jawab PERSIS:
+TOOL: research_topic
+Jika tidak, jelaskan langkah yang harus dilakukan."""
+    else:
+        prompt = f"""Kamu adalah AI Agent pembuat konten.
+
+Tujuan:
+{goal}
+
+Hasil research_topic:
+{tool_result}
+
+Analisis hasil tersebut. Pilih satu topik paling potensial dan jelaskan alasannya.
+Jangan memanggil tool lagi pada tahap ini."""
 
     response = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
         messages=[{"role": "user", "content": prompt}],
     )
-
-    return response.choices[0].message.content
+    return response.choices[0].message.content.strip()
