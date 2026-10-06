@@ -1,7 +1,7 @@
 import json
 import time
 from agent.brain import ask, VERIFICATION_MODEL
-from tools.research import web_search, fetch_page_text, source_domain
+from tools.web import search_web, fetch_page_text
 
 
 def verify_quote(person: str, quote: str, source_hint: str = "") -> str:
@@ -16,7 +16,7 @@ def verify_quote(person: str, quote: str, source_hint: str = "") -> str:
     print(f"[VERIFY] START | {person} | {quote}", flush=True)
 
     for query in queries:
-        for item in web_search(query, 6):
+        for item in search_web(query, 6):
             if item["url"] not in seen:
                 seen.add(item["url"])
                 evidence.append(item)
