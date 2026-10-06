@@ -2,7 +2,7 @@ import json
 from agent.brain import RateLimitError
 from agent.memory import load_memory,save_memory
 from agent.state import AgentState
-from tools.web import search_web
+from tools.web import search_news
 from tools.topic import choose_topic
 from tools.quotes import find_quotes,choose_quote
 from tools.verification import verify_quote
@@ -13,7 +13,7 @@ from tools.publisher import publish
 def run(goal):
  s=AgentState(goal=goal); mem=load_memory()
  try:
-  s.log("Mengamati kondisi Indonesia."); ev=search_web(goal,10)
+  s.log("Mengamati kondisi Indonesia."); ev=search_news("Indonesia " + goal,10)
   if not ev: raise RuntimeError("Riset web tidak menghasilkan bukti.")
   s.topic,s.context=choose_topic(goal,ev,mem.get("used_topics",[])); s.log(f"Kondisi terpilih: {s.topic}")
   s.log("Mencari quote dari tokoh/pendahulu."); c=find_quotes(s.topic,s.context,mem.get("used_quotes",[]))
