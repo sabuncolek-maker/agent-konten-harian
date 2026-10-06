@@ -3,8 +3,11 @@ from dataclasses import dataclass, field
 @dataclass
 class AgentState:
     goal: str
+    plan: list[str] = field(default_factory=list)
+    research: str = ""
     topic: str = ""
-    quote_candidates: str = ""
+    context: str = ""
+    quote_candidates: list[dict] = field(default_factory=list)
     person: str = ""
     quote: str = ""
     source: str = ""
@@ -19,4 +22,4 @@ class AgentState:
 
     def log(self, message: str) -> None:
         self.events.append(message)
-        print(f"[AGENT] {message}")
+        print(f"[AGENT] {message}", flush=True)
