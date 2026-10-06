@@ -2,8 +2,20 @@ from agent.brain import ask, RESEARCH_MODEL
 
 def research_topic(query: str) -> str:
     return ask(
-        f"""Cari dengan web search 5 topik yang sedang aktual dan relevan di Indonesia untuk tujuan: {query}
-Prioritaskan sumber kredibel dan terbaru. Untuk setiap topik berikan TOPIK, ALASAN RELEVAN, dan SUMBER.
-Jangan mengarang fakta atau tren.""",
+        f"""Gunakan browser search sungguhan untuk melakukan riset terbaru.
+
+Cari 5 topik yang sedang aktual dan relevan di Indonesia untuk tujuan:
+{query}
+
+Prioritaskan informasi terbaru dan sumber kredibel.
+Untuk setiap topik berikan:
+TOPIK
+ALASAN RELEVAN
+FAKTA TERKINI
+SUMBER
+
+Jangan mengarang tren, data, atau sumber.
+Jika informasi tidak dapat diverifikasi dari web, jangan masukkan.""",
         model=RESEARCH_MODEL,
+        web_search=True,
     )
