@@ -1,4 +1,5 @@
 import os
+import re
 
 from agent.brain import ask, MODEL, RateLimitError
 from agent.memory import load_memory, save_memory
@@ -16,40 +17,67 @@ MAX_QUOTE_ATTEMPTS = int(os.getenv("MAX_QUOTE_ATTEMPTS", "3"))
 MAX_REVISION_ATTEMPTS = int(os.getenv("MAX_REVISION_ATTEMPTS", "2"))
 MIN_CONTENT_SCORE = int(os.getenv("MIN_CONTENT_SCORE", "75"))
 
+
 def extract_field(text: str, label: str) -> str:
     for line in text.splitlines():
         if line.strip().upper().startswith(label.upper() + ":"):
             return line.split(":", 1)[1].strip()
     return ""
 
-def choose_quote(candidates, memory):
-    return ask(f"""Pilih SATU kandidat quote terbaik dari hasil web search berikut.
+
+def choose_quote(candidates: str, memory, rejected_quotes: list[str] | None = None):
+    rejected_quotes = rejected_quotes or []
+
+    return ask(
+        f"""Pilih SATU kandidat quote terbaik dari hasil web search berikut.
 
 Topik: {memory.get("_current_topic", "")}
-Hindari quote yang sudah dipakai: {memory.get("used_quotes", [])}
+Quote yang sudah dipakai: {memory.get("used_quotes", [])}
+Quote yang SUDAH DITOLAK pada run ini: {rejected_quotes}
 
 Syarat:
 - tokoh manusia nyata
 - quote berupa kutipan langsung
-- kandidat harus relevan dengan topik
-- pilih bukti sumber paling kuat
+- kandidat relevan dengan topik
+- pilih kandidat dengan bukti sumber paling kuat
+- jangan memilih quote yang sudah ditolak
 - jangan memilih parafrase
 - jangan membuat quote baru
+- jika tidak ada kandidat yang layak, jawab PERSON: NONE
 
-Jawab persis:
+Jawab PERSIS dan hanya empat baris:
 PERSON: ...
 QUOTE: ...
 SOURCE: ...
 
 HASIL WEB:
-{candidates}""", model=MODEL, max_tokens=800)
+{candidates}""",
+        model=MODEL,
+        max_tokens=700,
+    )
+
 
 def parse_quote(result: str):
-    return (
-        extract_field(result, "PERSON"),
-        extract_field(result, "QUOTE"),
-        extract_field(result, "SOURCE"),
-    )
+    person = extract_field(result, "PERSON")
+    quote = extract_field(result, "QUOTE")
+    source = extract_field(result, "SOURCE")
+
+    # Fallback untuk respons model yang menambahkan markdown/label.
+    if not person:
+        match = re.search(r"(?im)^\s*PERSON\s*:\s*(.+?)\s*$", result)
+        person = match.group(1).strip() if match else ""
+    if not quote:
+        match = re.search(r"(?im)^\s*QUOTE\s*:\s*(.+?)\s*$", result)
+        quote = match.group(1).strip() if match else ""
+    if not source:
+        match = re.search(r"(?im)^\s*SOURCE\s*:\s*(.+?)\s*$", result)
+        source = match.group(1).strip() if match else ""
+
+    if person.upper() == "NONE":
+        person = ""
+
+    return person, quote, source
+
 
 def run(goal):
     state = AgentState(goal=goal)
@@ -68,27 +96,41 @@ def run(goal):
         state.log(f"Topik terpilih: {state.topic}")
 
         memory["_current_topic"] = state.topic
-        candidates = research_quotes(state.topic)
+        candidates = research_quotes(state.topic, memory.get("used_quotes", []))
 
         verified = False
+        rejected_quotes = []
+
         for attempt in range(1, MAX_QUOTE_ATTEMPTS + 1):
             state.quote_attempts = attempt
             state.log(f"Verifikasi quote {attempt}/{MAX_QUOTE_ATTEMPTS}.")
 
-            selection = choose_quote(candidates, memory)
+            selection = choose_quote(candidates, memory, rejected_quotes)
+            print(f"[QUOTE] RAW SELECTION:\n{selection}", flush=True)
+
             state.person, state.quote, state.source = parse_quote(selection)
 
             if not state.person or not state.quote:
-                candidates = research_quotes(state.topic)
+                state.log("Quote selection gagal diparse; kandidat tetap dipakai untuk attempt berikutnya.")
                 continue
 
-            state.verification = verify_quote(state.person, state.quote, state.source)
+            state.log(f"Quote kandidat: {state.person} — {state.quote}")
 
-            if "STATUS: VERIFIED" in state.verification.upper():
+            state.verification = verify_quote(
+                state.person,
+                state.quote,
+                state.source,
+            )
+
+            status = extract_field(state.verification, "STATUS").upper()
+
+            if status == "VERIFIED":
                 verified = True
+                state.log("Quote VERIFIED.")
                 break
 
-            candidates = research_quotes(state.topic)
+            rejected_quotes.append(state.quote)
+            state.log(f"Quote ditolak: {status or 'UNKNOWN'}.")
 
         if not verified:
             state.status = "STOPPED_QUOTE_NOT_VERIFIED"
