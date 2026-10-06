@@ -1,5 +1,5 @@
 import json
-from agent.brain import ask, MODEL
+from agent.brain import ask, MODEL, FAST_MODEL
 from tools.research import web_search, build_quote_search_intents
 
 
