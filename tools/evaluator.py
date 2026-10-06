@@ -3,18 +3,29 @@ from agent.brain import ask
 
 def evaluate_content(content: str) -> str:
     return ask(f"""Evaluasi draft Instagram secara ketat.
-Periksa hook, relevansi Indonesia, akurasi quote/atribusi, misleading, keterbacaan, daya tarik, dan caption.
-Jawab:
+
+Periksa:
+- hook
+- relevansi Indonesia
+- akurasi quote dan atribusi
+- potensi misleading
+- keterbacaan
+- daya tarik
+- kualitas caption
+
+Jawab dengan format sederhana tanpa markdown pada label:
+
 SCORE: 0-100
 DECISION: PASS atau FAIL
 ISSUES: ...
 REVISION: ...
+
 KONTEN:
 {content}""")
 
 def parse_evaluation(result: str) -> tuple[int, str, str]:
-    score_match = re.search(r"SCORE\s*:\s*(\d+)", result, re.I)
-    decision_match = re.search(r"DECISION\s*:\s*(PASS|FAIL)", result, re.I)
+    score_match = re.search(r"SCORE\s*:?\s*(\d{1,3})", result, re.I)
+    decision_match = re.search(r"DECISION\s*:?\s*(PASS|FAIL)", result, re.I)
     score = int(score_match.group(1)) if score_match else 0
     decision = decision_match.group(1).upper() if decision_match else "FAIL"
     return score, decision, result
