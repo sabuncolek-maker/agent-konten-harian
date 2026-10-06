@@ -16,4 +16,5 @@ jobs:
       - run: pip install -r requirements.txt
       - run: python main.py
         env:
-          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          YTCLIP_API_KEY: ${{ secrets.YTCLIP_API_KEY }}
+          YTCLIP_BASE_URL: https://ai-api.ytclip.org/v1
