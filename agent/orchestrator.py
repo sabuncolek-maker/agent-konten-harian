@@ -1,7 +1,7 @@
+import json
 import os
-import re
 
-from agent.brain import ask, MODEL, RateLimitError
+from agent.brain import RateLimitError
 from agent.memory import load_memory, save_memory
 from agent.planner import create_plan
 from agent.state import AgentState
@@ -9,157 +9,118 @@ from tools.content import generate_content
 from tools.evaluator import evaluate_content, parse_evaluation
 from tools.image import generate_image_prompt
 from tools.publisher import publish
-from tools.quotes import research_quotes
+from tools.quotes import research_quotes, select_quote
 from tools.research import research_topic
 from tools.verification import verify_quote
 
-MAX_QUOTE_ATTEMPTS = int(os.getenv("MAX_QUOTE_ATTEMPTS", "3"))
+MAX_QUOTE_ATTEMPTS = int(os.getenv("MAX_QUOTE_ATTEMPTS", "6"))
 MAX_REVISION_ATTEMPTS = int(os.getenv("MAX_REVISION_ATTEMPTS", "2"))
 MIN_CONTENT_SCORE = int(os.getenv("MIN_CONTENT_SCORE", "75"))
 
 
-def extract_field(text: str, label: str) -> str:
-    for line in text.splitlines():
-        if line.strip().upper().startswith(label.upper() + ":"):
-            return line.split(":", 1)[1].strip()
-    return ""
+def _json(text: str, default=None):
+    try:
+        return json.loads(text)
+    except Exception:
+        return default
 
 
-def choose_quote(candidates: str, memory, rejected_quotes: list[str] | None = None):
-    rejected_quotes = rejected_quotes or []
-
-    return ask(
-        f"""Pilih SATU kandidat quote terbaik dari hasil web search berikut.
-
-Topik: {memory.get("_current_topic", "")}
-Quote yang sudah dipakai: {memory.get("used_quotes", [])}
-Quote yang SUDAH DITOLAK pada run ini: {rejected_quotes}
-
-Syarat:
-- tokoh manusia nyata
-- quote berupa kutipan langsung
-- kandidat relevan dengan topik
-- pilih kandidat dengan bukti sumber paling kuat
-- jangan memilih quote yang sudah ditolak
-- jangan memilih parafrase
-- jangan membuat quote baru
-- jika tidak ada kandidat yang layak, jawab PERSON: NONE
-
-Jawab PERSIS dan hanya empat baris:
-PERSON: ...
-QUOTE: ...
-SOURCE: ...
-
-HASIL WEB:
-{candidates}""",
-        model=MODEL,
-        max_tokens=700,
-    )
+def _verification_status(text: str) -> str:
+    data = _json(text, {})
+    status = str(data.get("status", "UNCERTAIN")).upper()
+    return status if status in {"VERIFIED", "UNCERTAIN", "REJECTED"} else "UNCERTAIN"
 
 
-def parse_quote(result: str):
-    person = extract_field(result, "PERSON")
-    quote = extract_field(result, "QUOTE")
-    source = extract_field(result, "SOURCE")
-
-    # Fallback untuk respons model yang menambahkan markdown/label.
-    if not person:
-        match = re.search(r"(?im)^\s*PERSON\s*:\s*(.+?)\s*$", result)
-        person = match.group(1).strip() if match else ""
-    if not quote:
-        match = re.search(r"(?im)^\s*QUOTE\s*:\s*(.+?)\s*$", result)
-        quote = match.group(1).strip() if match else ""
-    if not source:
-        match = re.search(r"(?im)^\s*SOURCE\s*:\s*(.+?)\s*$", result)
-        source = match.group(1).strip() if match else ""
-
-    if person.upper() == "NONE":
-        person = ""
-
-    return person, quote, source
-
-
-def run(goal):
+def run(goal: str):
     state = AgentState(goal=goal)
     memory = load_memory()
 
     try:
-        state.log("Membuat rencana.")
-        create_plan(goal)
-
+        state.plan = create_plan(goal)
         state.log("Riset topik dari web.")
-        research = research_topic(goal, memory.get("used_topics", []))
+        state.research = research_topic(goal, memory.get("used_topics", []))
 
-        state.topic = extract_field(research, "TOPIK")
-        if not state.topic:
-            raise RuntimeError("Research model tidak mengembalikan TOPIK.")
+        research_data = _json(state.research)
+        if not research_data or not research_data.get("topic"):
+            raise RuntimeError("Research topik tidak menghasilkan JSON/topic yang valid.")
+
+        state.topic = str(research_data["topic"]).strip()
+        state.context = json.dumps(research_data, ensure_ascii=False)
         state.log(f"Topik terpilih: {state.topic}")
 
-        memory["_current_topic"] = state.topic
-        candidates = research_quotes(state.topic, memory.get("used_quotes", []))
+        state.log("Mencari kandidat quote secara semantik.")
+        state.quote_candidates = research_quotes(state.context, memory.get("used_quotes", []))
 
+        remaining = list(state.quote_candidates)
+        rejected = []
         verified = False
-        rejected_quotes = []
 
         for attempt in range(1, MAX_QUOTE_ATTEMPTS + 1):
             state.quote_attempts = attempt
-            state.log(f"Verifikasi quote {attempt}/{MAX_QUOTE_ATTEMPTS}.")
+            if not remaining:
+                state.log("Tidak ada kandidat quote tersisa.")
+                break
 
-            selection = choose_quote(candidates, memory, rejected_quotes)
-            print(f"[QUOTE] RAW SELECTION:\n{selection}", flush=True)
+            state.log(f"Seleksi + verifikasi quote {attempt}/{MAX_QUOTE_ATTEMPTS}.")
+            candidate = select_quote(remaining, state.context, rejected)
 
-            state.person, state.quote, state.source = parse_quote(selection)
-
-            if not state.person or not state.quote:
-                state.log("Quote selection gagal diparse; kandidat tetap dipakai untuk attempt berikutnya.")
+            if not candidate:
+                # Jangan mengulang kandidat yang sama jika selector gagal.
+                remaining.pop(0)
+                state.log("Selector gagal menghasilkan kandidat valid; kandidat dilewati.")
                 continue
 
-            state.log(f"Quote kandidat: {state.person} — {state.quote}")
+            state.person = candidate["person"]
+            state.quote = candidate["quote"]
+            state.source = candidate.get("source_url") or candidate.get("url", "")
+            state.log(f"Kandidat: {state.person} — {state.quote}")
 
-            state.verification = verify_quote(
-                state.person,
-                state.quote,
-                state.source,
-            )
-
-            status = extract_field(state.verification, "STATUS").upper()
+            state.verification = verify_quote(state.person, state.quote, state.source)
+            status = _verification_status(state.verification)
 
             if status == "VERIFIED":
                 verified = True
                 state.log("Quote VERIFIED.")
                 break
 
-            rejected_quotes.append(state.quote)
-            state.log(f"Quote ditolak: {status or 'UNKNOWN'}.")
+            rejected.append(state.quote)
+            state.log(f"Quote {status}; kandidat dikeluarkan dari pool.")
+            remaining = [
+                item for item in remaining
+                if item.get("url") != candidate.get("url")
+                and item.get("snippet", "").strip() != candidate.get("snippet", "").strip()
+            ]
 
         if not verified:
             state.status = "STOPPED_QUOTE_NOT_VERIFIED"
-            state.log("Berhenti: quote tidak cukup terverifikasi.")
-            memory.pop("_current_topic", None)
+            state.log("Berhenti dengan aman: tidak ada quote yang cukup terverifikasi.")
             save_memory(memory)
             return state
 
+        last_revision = ""
+        passed = False
         for attempt in range(MAX_REVISION_ATTEMPTS + 1):
             state.revision_attempts = attempt
-            feedback = state.evaluation if attempt else ""
-            state.log(f"Generate/evaluasi konten iterasi {attempt + 1}.")
-
+            state.log(f"Generate/evaluasi konten {attempt + 1}/{MAX_REVISION_ATTEMPTS + 1}.")
             state.content = generate_content(
                 state.topic,
                 state.person,
                 state.quote,
                 state.verification,
-                feedback,
+                last_revision,
             )
             state.evaluation = evaluate_content(state.content)
             score, decision, evaluation_text = parse_evaluation(state.evaluation)
             state.log(f"Score {score}/100 - {decision}")
 
             if decision == "PASS" and score >= MIN_CONTENT_SCORE:
+                passed = True
                 break
-        else:
+
+            last_revision = evaluation_text
+
+        if not passed:
             state.status = "STOPPED_CONTENT_FAILED"
-            memory.pop("_current_topic", None)
             save_memory(memory)
             return state
 
@@ -174,8 +135,8 @@ def run(goal):
             "quote": state.quote,
             "person": state.person,
             "status": state.status,
+            "source": state.source,
         })
-        memory.pop("_current_topic", None)
         save_memory(memory)
 
         state.log(f"Pipeline selesai: {state.status}")
@@ -184,12 +145,10 @@ def run(goal):
     except RateLimitError as exc:
         state.status = "RATE_LIMITED"
         state.log(str(exc))
-        memory.pop("_current_topic", None)
         save_memory(memory)
         return state
     except Exception as exc:
         state.status = "ERROR"
         state.log(f"Error: {type(exc).__name__}: {exc}")
-        memory.pop("_current_topic", None)
         save_memory(memory)
         return state
