@@ -25,9 +25,22 @@ def ask(prompt: str, model: str | None = None, max_tokens: int = 1600) -> str:
             model=model or MODEL,
             messages=[{"role": "user", "content": prompt}],
             max_tokens=max_tokens,
-            temperature=0.7,
         )
-        return (response.choices[0].message.content or "").strip()
+        message = response.choices[0].message
+        content = (message.content or "").strip()
+
+        # Be tolerant of OpenAI-compatible gateways that expose reasoning separately.
+        if not content:
+            reasoning = getattr(message, "reasoning_content", None)
+            if reasoning:
+                content = str(reasoning).strip()
+
+        if not content:
+            raise RuntimeError(
+                f"Model {model or MODEL} mengembalikan respons kosong."
+            )
+
+        return content
     except Exception as exc:
         status = getattr(exc, "status_code", None)
         if status == 429:
