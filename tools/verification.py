@@ -1,4 +1,4 @@
-from agent.brain import ask, RESEARCH_MODEL
+from agent.brain import ask, VERIFICATION_MODEL
 
 def verify_quote(person: str, quote: str, source_hint: str = "") -> str:
     return ask(
@@ -31,6 +31,7 @@ BUKTI:
 SUMBER:
 URL:
 ALASAN:""",
-        model=RESEARCH_MODEL,
+        model=VERIFICATION_MODEL,
         web_search=True,
+        max_tokens=2800,
     )
