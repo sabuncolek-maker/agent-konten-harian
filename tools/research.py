@@ -167,5 +167,5 @@ KONTEKS:
         data = json.loads(result)
         return [str(q).strip() for q in data.get("queries", []) if str(q).strip()][:5]
     except Exception:
-        lines = [line.strip(" -•\\t\\"") for line in result.splitlines() if line.strip()]
+        lines = [line.strip(' -•\\t"') for line in result.splitlines() if line.strip()]
         return lines[:5]
