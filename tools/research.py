@@ -191,11 +191,17 @@ Jawab JSON VALID saja:
 KONTEKS:
 {topic_research}""", model=FAST_MODEL, max_tokens=500)
     try:
+    try:
         data = _extract_json_object(result)
         if data and isinstance(data.get("queries"), list):
-            queries = [str(q).strip() for q in data["queries"] if str(q).strip() and str(q).strip() != "..."]
+            queries = [
+                str(q).strip()
+                for q in data["queries"]
+                if str(q).strip() and str(q).strip() != "..."
+            ]
             if len(queries) == 5:
                 return queries
         raise ValueError("Model tidak menghasilkan tepat 5 query valid")
-        lines = [line.strip(' -•\\t"') for line in result.splitlines() if line.strip()]
-        return lines[:5]
+    except Exception as exc:
+        print(f"[QUOTE] Invalid search intents: {type(exc).__name__}: {exc}", flush=True)
+        return []
