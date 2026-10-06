@@ -24,12 +24,15 @@ def extract_field(text: str, label: str) -> str:
 
 def choose_quote(candidates, memory):
     return ask(f"""Pilih SATU kandidat quote terbaik dari hasil web search berikut.
+
+Topik: {memory.get("_current_topic", "")}
 Hindari quote yang sudah dipakai: {memory.get("used_quotes", [])}
 
 Syarat:
 - tokoh manusia nyata
-- quote harus berupa kutipan langsung
-- pilih kandidat dengan bukti sumber paling kuat
+- quote berupa kutipan langsung
+- kandidat harus relevan dengan topik
+- pilih bukti sumber paling kuat
 - jangan memilih parafrase
 - jangan membuat quote baru
 
@@ -59,12 +62,12 @@ def run(goal):
         state.log("Riset topik dari web.")
         research = research_topic(goal, memory.get("used_topics", []))
 
-        # Research model already selected the topic. Avoid an unnecessary second model call.
         state.topic = extract_field(research, "TOPIK")
         if not state.topic:
             raise RuntimeError("Research model tidak mengembalikan TOPIK.")
         state.log(f"Topik terpilih: {state.topic}")
 
+        memory["_current_topic"] = state.topic
         candidates = research_quotes(state.topic)
 
         verified = False
@@ -79,9 +82,7 @@ def run(goal):
                 candidates = research_quotes(state.topic)
                 continue
 
-            state.verification = verify_quote(
-                state.person, state.quote, state.source
-            )
+            state.verification = verify_quote(state.person, state.quote, state.source)
 
             if "STATUS: VERIFIED" in state.verification.upper():
                 verified = True
@@ -92,6 +93,7 @@ def run(goal):
         if not verified:
             state.status = "STOPPED_QUOTE_NOT_VERIFIED"
             state.log("Berhenti: quote tidak cukup terverifikasi.")
+            memory.pop("_current_topic", None)
             save_memory(memory)
             return state
 
@@ -108,13 +110,14 @@ def run(goal):
                 feedback,
             )
             state.evaluation = evaluate_content(state.content)
-            score, decision, _ = parse_evaluation(state.evaluation)
+            score, decision, evaluation_text = parse_evaluation(state.evaluation)
             state.log(f"Score {score}/100 - {decision}")
 
             if decision == "PASS" and score >= MIN_CONTENT_SCORE:
                 break
         else:
             state.status = "STOPPED_CONTENT_FAILED"
+            memory.pop("_current_topic", None)
             save_memory(memory)
             return state
 
@@ -130,6 +133,7 @@ def run(goal):
             "person": state.person,
             "status": state.status,
         })
+        memory.pop("_current_topic", None)
         save_memory(memory)
 
         state.log(f"Pipeline selesai: {state.status}")
@@ -138,5 +142,12 @@ def run(goal):
     except RateLimitError as exc:
         state.status = "RATE_LIMITED"
         state.log(str(exc))
+        memory.pop("_current_topic", None)
+        save_memory(memory)
+        return state
+    except Exception as exc:
+        state.status = "ERROR"
+        state.log(f"Error: {type(exc).__name__}: {exc}")
+        memory.pop("_current_topic", None)
         save_memory(memory)
         return state
