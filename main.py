@@ -1,5 +1,6 @@
-from agent import ask_agent
+from agent import analyze_research, ask_agent
 from tools import run_tool
+
 
 def main() -> None:
     goal = """Buat satu konten Instagram berupa quote
@@ -9,15 +10,22 @@ yang relevan dengan kehidupan masyarakat Indonesia hari ini.""".strip()
     decision = ask_agent(goal)
     print(decision)
 
-    if decision == "TOOL: research_topic":
-        print("\n=== LANGKAH 2: TOOL DIJALANKAN ===\n")
-        research_result = run_tool("research_topic")
-        print(research_result)
+    if not decision.startswith("TOOL: research_topic"):
+        print("\nAgent tidak meminta research tool. Proses berhenti.\n")
+        return
 
-        print("\n=== LANGKAH 3: HASIL TOOL KEMBALI KE AGENT ===\n")
-        print(ask_agent(goal, research_result))
-    else:
-        print("\nAgent belum meminta tool. Proses berhenti.\n")
+    query = decision.split("QUERY:", 1)[1].strip()
+
+    print("\n=== LANGKAH 2: RESEARCH INTERNET ===\n")
+    print(f"Query: {query}\n")
+
+    research_result = run_tool("research_topic", query=query)
+    print(research_result)
+
+    print("\n=== LANGKAH 3: AGENT MENGANALISIS HASIL RISET ===\n")
+    final_decision = analyze_research(goal, research_result)
+    print(final_decision)
+
 
 if __name__ == "__main__":
     main()
