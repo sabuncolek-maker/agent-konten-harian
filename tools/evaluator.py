@@ -21,11 +21,11 @@ ISSUES: ...
 REVISION: ...
 
 KONTEN:
-{content}""")
+{content}""", max_tokens=1000)
 
 def parse_evaluation(result: str) -> tuple[int, str, str]:
-    score_match = re.search(r"SCORE\s*:?\s*(\d{1,3})", result, re.I)
-    decision_match = re.search(r"DECISION\s*:?\s*(PASS|FAIL)", result, re.I)
+    score_match = re.search(r"SCOREs*:?s*(d{1,3})", result, re.I)
+    decision_match = re.search(r"DECISIONs*:?s*(PASS|FAIL)", result, re.I)
     score = int(score_match.group(1)) if score_match else 0
     decision = decision_match.group(1).upper() if decision_match else "FAIL"
     return score, decision, result
