@@ -112,8 +112,30 @@ def source_domain(url: str) -> str:
         return ""
 
 
+def _extract_json_object(text: str) -> dict | None:
+    """Parse JSON even when the model wraps it in markdown or extra text."""
+    if not text:
+        return None
+    cleaned = text.strip()
+    if cleaned.startswith("```"):
+        cleaned = cleaned.replace("```json", "", 1).replace("```", "", 1).strip()
+    try:
+        data = json.loads(cleaned)
+        return data if isinstance(data, dict) else None
+    except json.JSONDecodeError:
+        start = cleaned.find("{")
+        end = cleaned.rfind("}")
+        if start == -1 or end <= start:
+            return None
+        try:
+            data = json.loads(cleaned[start:end + 1])
+            return data if isinstance(data, dict) else None
+        except json.JSONDecodeError:
+            return None
+
+
 def _compact(evidence: list[dict], limit: int = 20) -> str:
-    return "\n".join(f"[{i}] {x['title']} | {x['snippet']} | {x['url']}" for i, x in enumerate(evidence[:limit], 1))
+    return "\n".join(f"[{i}] {x["title"]} | {x["snippet"]} | {x["url"]}" for i, x in enumerate(evidence[:limit], 1))
 
 
 def research_topic(goal: str, memory_topics: list[str] | None = None) -> str:
@@ -150,7 +172,12 @@ Jawab JSON VALID saja:
 BUKTI WEB:
 {_compact(evidence)}
 """
-    return ask(prompt, model=MODEL, max_tokens=1200)
+    result = ask(prompt, model=MODEL, max_tokens=1200)
+    data = _extract_json_object(result)
+    if not data or not str(data.get("topic", "")).strip():
+        print(f"[RESEARCH] Invalid JSON response: {result[:1000]!r}", flush=True)
+        raise RuntimeError("Research model tidak menghasilkan JSON/topic yang valid.")
+    return json.dumps(data, ensure_ascii=False)
 
 
 def build_quote_search_intents(topic_research: str) -> list[str]:
@@ -164,8 +191,10 @@ Jawab JSON VALID saja:
 KONTEKS:
 {topic_research}""", model=FAST_MODEL, max_tokens=500)
     try:
-        data = json.loads(result)
-        return [str(q).strip() for q in data.get("queries", []) if str(q).strip()][:5]
+        data = _extract_json_object(result)
+        if data:
+            return [str(q).strip() for q in data.get("queries", []) if str(q).strip()][:5]
+        raise ValueError("JSON query tidak valid")
     except Exception:
         lines = [line.strip(' -•\\t"') for line in result.splitlines() if line.strip()]
         return lines[:5]
