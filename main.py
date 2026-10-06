@@ -1,10 +1,15 @@
-from agent.brain import ask
+from agent.orchestrator import run
 
+GOAL = "Buat satu konten Instagram berupa quote yang relevan dengan kehidupan masyarakat Indonesia hari ini."
 
-def run():
-    goal = 'Buat satu konten Instagram berupa quote yang relevan dengan kehidupan masyarakat Indonesia hari ini.'
-    return ask(f'''Kamu adalah AI Agent. Tujuan: {goal}\nKamu memiliki tools: research_topic, research_quotes, verify_quote, generate_content, evaluate_content, generate_image_prompt, publish. Tentukan tindakan berikutnya dan alasannya.''')
-
-
-if __name__ == '__main__':
-    print(run())
+if __name__ == "__main__":
+    state = run(GOAL)
+    print("\n=== HASIL AGENT ===")
+    print("STATUS:", state.status)
+    print("TOPIK:", state.topic)
+    print("TOKOH:", state.person)
+    print("QUOTE:", state.quote)
+    print("VERIFIKASI:\n", state.verification)
+    print("KONTEN:\n", state.content)
+    print("EVALUASI:\n", state.evaluation)
+    print("IMAGE PROMPT:\n", state.image_prompt)
