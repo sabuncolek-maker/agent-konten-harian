@@ -62,7 +62,7 @@ KANDIDAT:
         candidate = candidates[idx - 1].copy()
         candidate["person"] = str(data.get("person", "")).strip()
         candidate["quote"] = str(data.get("quote", "")).strip()
-        candidate["source_url"] = str(data.get("source_url", "")).strip() or candidate["url"]
+        candidate["source_url"] = candidate["url"]
         if not candidate["person"] or not candidate["quote"]:
             return None
         return candidate
