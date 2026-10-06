@@ -2,27 +2,15 @@ import re
 from agent.brain import ask
 
 def evaluate_content(content: str) -> str:
-    return ask(
-        f"""Evaluasi draft konten Instagram berikut secara ketat.
-
-Periksa:
-- hook
-- relevansi Indonesia
-- akurasi quote dan atribusi
-- potensi misleading
-- keterbacaan
-- daya tarik
-- caption
-
-Jawab dengan format:
+    return ask(f"""Evaluasi draft Instagram secara ketat.
+Periksa hook, relevansi Indonesia, akurasi quote/atribusi, misleading, keterbacaan, daya tarik, dan caption.
+Jawab:
 SCORE: 0-100
 DECISION: PASS atau FAIL
 ISSUES: ...
 REVISION: ...
-
 KONTEN:
-{content}"""
-    )
+{content}""")
 
 def parse_evaluation(result: str) -> tuple[int, str, str]:
     score_match = re.search(r"SCORE\s*:\s*(\d+)", result, re.I)
