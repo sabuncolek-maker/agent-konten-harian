@@ -4,7 +4,7 @@ from agent.memory import load_memory,save_memory
 from agent.state import AgentState
 from tools.web import search_web
 from tools.topic import choose_topic
-from tools.quote import find_quotes,choose_quote
+from tools.quotes import find_quotes,choose_quote
 from tools.verification import verify_quote
 from tools.content import generate_content
 from tools.evaluator import evaluate_content,parse_evaluation
