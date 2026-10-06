@@ -4,8 +4,10 @@ from groq import Groq
 
 load_dotenv()
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-MODEL = os.getenv("AGENT_MODEL", "llama-3.3-70b-versatile")
-RESEARCH_MODEL = os.getenv("RESEARCH_MODEL", "groq/compound")
+
+# Current Groq production model with built-in browser search capability.
+MODEL = os.getenv("AGENT_MODEL", "openai/gpt-oss-120b")
+RESEARCH_MODEL = os.getenv("RESEARCH_MODEL", "openai/gpt-oss-120b")
 
 def ask(prompt: str, model: str | None = None) -> str:
     response = client.chat.completions.create(
