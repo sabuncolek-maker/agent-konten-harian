@@ -1,34 +1,45 @@
 # Agent Konten Harian — Kutipan
 
-## STEP 3 — Research Internet
+## STEP 4 — Quote Research + Verification
 
-Pada tahap ini mock data dari STEP 2 diganti dengan research nyata.
+Agent sekarang memiliki tiga tool utama:
 
-Alurnya:
+- `research_topic` → mencari topik aktual.
+- `research_quotes` → mencari kandidat quote yang relevan.
+- `verify_quote` → melakukan fact-checking atribusi quote.
+
+Alur:
 
 ```
 Goal
-  ↓
+ ↓
+Research Topic
+ ↓
+Agent memilih topik
+ ↓
+Research Quotes
+ ↓
+Agent memilih kandidat
+ ↓
+Verify Quote
+ ↓
 Agent
-  ↓
-Agent memilih research_topic + membuat query
-  ↓
-Research Tool
-  ↓
-Groq Web Search
-  ↓
-Hasil internet
-  ↓
-Agent
-  ↓
-Memilih topik paling potensial
+ ├── APPROVE
+ ├── RESEARCH_ANOTHER_QUOTE
+ └── REJECT
 ```
 
-### Teknologi research
+### Prinsip verifikasi
 
-Research menggunakan **Groq Web Search** melalui model `groq/compound`, sehingga aplikasi tidak perlu menambahkan API search pihak ketiga pada tahap ini.
+Quote **tidak dianggap benar hanya karena sering muncul di internet**.
 
-Groq mendukung built-in web search dan model `groq/compound` untuk melakukan pencarian web. 
+Agent diminta mencari sumber primer bila memungkinkan, seperti buku, pidato, transkrip, wawancara, arsip, atau penerbit.
+
+Status verifikasi:
+
+- **VERIFIED** → boleh digunakan sebagai direct quote.
+- **UNCERTAIN** → jangan digunakan sebagai direct quote.
+- **REJECTED** → jangan digunakan.
 
 ### Menjalankan
 
@@ -37,30 +48,6 @@ pip install -r requirements.txt
 python main.py
 ```
 
-Pastikan `.env` berisi:
+Pastikan `.env` berisi `GROQ_API_KEY`.
 
-```
-GROQ_API_KEY=API_KEY_KAMU
-```
-
-### Output yang diharapkan
-
-Agent akan menghasilkan keputusan seperti:
-
-```
-TOOL: research_topic
-QUERY: topik yang sedang ramai dan relevan di Indonesia untuk konten quote
-```
-
-Kemudian research tool benar-benar mencari informasi di internet dan hasilnya diberikan kembali kepada agent.
-
-### Belum dilakukan
-
-- mencari quote tokoh
-- verifikasi quote
-- membuat gambar
-- evaluator
-- database
-- publish Instagram
-
-Itu akan ditambahkan bertahap pada step berikutnya.
+Tahap ini belum membuat gambar atau mempublikasikan konten. Fokusnya adalah memastikan agent memiliki pipeline riset dan verifikasi quote sebelum masuk ke produksi konten.
