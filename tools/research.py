@@ -172,7 +172,7 @@ Jawab JSON VALID saja:
 BUKTI WEB:
 {_compact(evidence)}
 """
-    result = ask(prompt, model=MODEL, max_tokens=1200)
+    result = ask(prompt, model=FAST_MODEL, max_tokens=1800)
     data = _extract_json_object(result)
     if not data or not str(data.get("topic", "")).strip():
         print(f"[RESEARCH] Invalid JSON response: {result[:1000]!r}", flush=True)
