@@ -1,9 +1,9 @@
 import html
 import json
 import time
-from urllib.parse import quote_plus, unquote
+from urllib.parse import quote_plus, unquote, urlparse
 from urllib.request import Request, urlopen
-from urllib.parse import urlparse
+from xml.etree import ElementTree as ET
 
 from bs4 import BeautifulSoup
 from agent.brain import ask, MODEL, FAST_MODEL
@@ -11,11 +11,10 @@ from agent.brain import ask, MODEL, FAST_MODEL
 UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/128 Safari/537.36"
 
 
-def _parse_results(page: str, limit: int) -> list[dict]:
+def _parse_ddg(page: str, limit: int) -> list[dict]:
     soup = BeautifulSoup(page, "html.parser")
     results, seen = [], set()
-    nodes = soup.select(".result") or soup.select("article")
-    for item in nodes:
+    for item in (soup.select(".result") or soup.select("article")):
         link = item.select_one(".result__a") or item.select_one("a[href]")
         if not link:
             continue
@@ -34,44 +33,73 @@ def _parse_results(page: str, limit: int) -> list[dict]:
     return results
 
 
+def _google_news_search(query: str, limit: int) -> list[dict]:
+    url = "https://news.google.com/rss/search?q=" + quote_plus(query) + "&hl=id&gl=ID&ceid=ID:id"
+    req = Request(url, headers={"User-Agent": UA, "Accept-Language": "id-ID,id;q=0.9,en;q=0.8"})
+    with urlopen(req, timeout=20) as response:
+        raw = response.read(500000)
+    root = ET.fromstring(raw)
+    results = []
+    for item in root.findall(".//item")[:limit]:
+        title = item.findtext("title", "").strip()
+        link = item.findtext("link", "").strip()
+        description = item.findtext("description", "").strip()
+        if not link or not title:
+            continue
+        snippet = BeautifulSoup(description, "html.parser").get_text(" ", strip=True)
+        results.append({
+            "title": html.unescape(title),
+            "snippet": html.unescape(snippet),
+            "url": link,
+        })
+    return results
+
+
+def _ddg_search(query: str, limit: int) -> list[dict]:
+    for base in (
+        "https://html.duckduckgo.com/html/?q=",
+        "https://lite.duckduckgo.com/lite/?q=",
+    ):
+        url = base + quote_plus(query)
+        req = Request(url, headers={"User-Agent": UA, "Accept-Language": "en-US,en;q=0.9"})
+        with urlopen(req, timeout=20) as response:
+            page = response.read().decode("utf-8", errors="ignore")
+        results = _parse_ddg(page, limit)
+        if results:
+            return results
+    return []
+
+
 def web_search(query: str, limit: int = 6, retries: int = 2) -> list[dict]:
-    """Real web search with retry and DDG HTML/lite fallback."""
-    endpoints = [
-        "https://html.duckduckgo.com/html/?q=" + quote_plus(query),
-        "https://lite.duckduckgo.com/lite/?q=" + quote_plus(query),
-    ]
+    """Real search with Google News RSS as the reliable GitHub Actions path and DDG fallback."""
     last_error = None
     for attempt in range(retries + 1):
-        for url in endpoints:
+        for provider in (_google_news_search, _ddg_search):
             try:
-                req = Request(url, headers={"User-Agent": UA, "Accept-Language": "en-US,en;q=0.9"})
-                with urlopen(req, timeout=20) as response:
-                    page = response.read().decode("utf-8", errors="ignore")
-                results = _parse_results(page, limit)
+                results = provider(query, limit)
                 if results:
+                    print(f"[WEB] {provider.__name__} OK | {query}", flush=True)
                     return results
             except Exception as exc:
                 last_error = exc
+                print(f"[WEB] {provider.__name__} failed | {type(exc).__name__}: {exc}", flush=True)
         if attempt < retries:
-            time.sleep(1.2 * (attempt + 1))
-    if last_error:
-        print(f"[WEB] search failed: {type(last_error).__name__}: {last_error}", flush=True)
+            time.sleep(1.0 * (attempt + 1))
+    print(f"[WEB] ALL PROVIDERS FAILED | query={query!r} | last={last_error}", flush=True)
     return []
 
 
 def fetch_page_text(url: str, max_chars: int = 12000) -> str:
-    """Fetch readable text from one real source page for verification."""
     if not url or not url.startswith(("http://", "https://")):
         return ""
     try:
-        req = Request(url, headers={"User-Agent": UA, "Accept-Language": "en-US,en;q=0.9"})
+        req = Request(url, headers={"User-Agent": UA, "Accept-Language": "id-ID,id;q=0.9,en;q=0.8"})
         with urlopen(req, timeout=15) as response:
             raw = response.read(300000).decode("utf-8", errors="ignore")
         soup = BeautifulSoup(raw, "html.parser")
         for node in soup(["script", "style", "noscript", "svg"]):
             node.decompose()
-        text = " ".join(soup.stripped_strings)
-        return text[:max_chars]
+        return " ".join(soup.stripped_strings)[:max_chars]
     except Exception as exc:
         print(f"[WEB] page fetch failed for {url}: {type(exc).__name__}: {exc}", flush=True)
         return ""
@@ -85,17 +113,14 @@ def source_domain(url: str) -> str:
 
 
 def _compact(evidence: list[dict], limit: int = 20) -> str:
-    return "\n".join(
-        f"[{i}] {x['title']} | {x['snippet']} | {x['url']}"
-        for i, x in enumerate(evidence[:limit], 1)
-    )
+    return "\n".join(f"[{i}] {x['title']} | {x['snippet']} | {x['url']}" for i, x in enumerate(evidence[:limit], 1))
 
 
 def research_topic(goal: str, memory_topics: list[str] | None = None) -> str:
     memory_topics = memory_topics or []
     searches = [
-        f"Indonesia berita terbaru hari ini {goal}",
-        f"Indonesia tren sosial terbaru masyarakat {goal}",
+        f"Indonesia berita terbaru {goal}",
+        f"Indonesia tren sosial masyarakat {goal}",
         f"site:kompas.com {goal}",
         f"site:tempo.co {goal}",
         f"site:antaranews.com {goal}",
@@ -106,9 +131,8 @@ def research_topic(goal: str, memory_topics: list[str] | None = None) -> str:
             if item["url"] not in seen:
                 seen.add(item["url"])
                 evidence.append(item)
-
     if not evidence:
-        raise RuntimeError("Web search topik gagal menghasilkan bukti. Agent tidak boleh mengarang.")
+        raise RuntimeError("Web search topik gagal. Semua provider search tidak menghasilkan hasil; agent tidak mengarang.")
 
     prompt = f"""Kamu adalah research analyst untuk agent konten Indonesia.
 TUJUAN:
@@ -117,10 +141,9 @@ TUJUAN:
 TOPIK YANG SUDAH DIPAKAI:
 {memory_topics}
 
-Gunakan HANYA bukti web. Pilih satu isu aktual yang relevan, aman, punya bukti kuat, dan belum dipakai.
-Pertahankan nama tokoh, organisasi, tempat, peristiwa, dan konteks penting jika muncul dalam bukti.
+Gunakan HANYA bukti web. Pilih satu isu aktual yang relevan, aman, punya bukti cukup, dan belum dipakai.
+Pertahankan nama tokoh, organisasi, tempat, peristiwa, dan konteks penting dari sumber.
 Jangan mengubah isu menjadi slogan generik. Jangan membuat fakta atau URL.
-
 Jawab JSON VALID saja:
 {{"topic":"...","context":"...","angle":"...","facts":["..."],"sources":["..."]}}
 
@@ -144,5 +167,5 @@ KONTEKS:
         data = json.loads(result)
         return [str(q).strip() for q in data.get("queries", []) if str(q).strip()][:5]
     except Exception:
-        lines = [line.strip(" -•\t\"") for line in result.splitlines() if line.strip()]
+        lines = [line.strip(" -•\\t\\"") for line in result.splitlines() if line.strip()]
         return lines[:5]
