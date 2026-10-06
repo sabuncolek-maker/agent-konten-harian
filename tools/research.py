@@ -3,6 +3,7 @@ import json
 import time
 from urllib.parse import quote_plus, unquote
 from urllib.request import Request, urlopen
+from urllib.parse import urlparse
 
 from bs4 import BeautifulSoup
 from agent.brain import ask, MODEL, FAST_MODEL
@@ -56,6 +57,31 @@ def web_search(query: str, limit: int = 6, retries: int = 2) -> list[dict]:
     if last_error:
         print(f"[WEB] search failed: {type(last_error).__name__}: {last_error}", flush=True)
     return []
+
+
+def fetch_page_text(url: str, max_chars: int = 12000) -> str:
+    """Fetch readable text from one real source page for verification."""
+    if not url or not url.startswith(("http://", "https://")):
+        return ""
+    try:
+        req = Request(url, headers={"User-Agent": UA, "Accept-Language": "en-US,en;q=0.9"})
+        with urlopen(req, timeout=15) as response:
+            raw = response.read(300000).decode("utf-8", errors="ignore")
+        soup = BeautifulSoup(raw, "html.parser")
+        for node in soup(["script", "style", "noscript", "svg"]):
+            node.decompose()
+        text = " ".join(soup.stripped_strings)
+        return text[:max_chars]
+    except Exception as exc:
+        print(f"[WEB] page fetch failed for {url}: {type(exc).__name__}: {exc}", flush=True)
+        return ""
+
+
+def source_domain(url: str) -> str:
+    try:
+        return urlparse(url).netloc.lower()
+    except Exception:
+        return ""
 
 
 def _compact(evidence: list[dict], limit: int = 20) -> str:
