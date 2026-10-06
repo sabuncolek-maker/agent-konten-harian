@@ -24,4 +24,5 @@ URL:
 Jika tidak menemukan bukti yang cukup, katakan TIDAK ADA KANDIDAT TERVERIFIKASI.""",
         model=RESEARCH_MODEL,
         web_search=True,
+        max_tokens=2200,
     )
