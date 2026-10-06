@@ -18,4 +18,5 @@ Jangan mengarang tren, data, atau sumber.
 Jika informasi tidak dapat diverifikasi dari web, jangan masukkan.""",
         model=RESEARCH_MODEL,
         web_search=True,
+        max_tokens=1800,
     )
