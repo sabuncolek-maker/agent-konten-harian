@@ -1,53 +1,37 @@
 # Agent Konten Harian — Kutipan
 
-## STEP 4 — Quote Research + Verification
+Agent yang mencari kondisi aktual Indonesia, menemukan kutipan tokoh yang relevan, memverifikasi atribusinya, lalu menyusun konten Instagram.
 
-Agent sekarang memiliki tiga tool utama:
-
-- `research_topic` → mencari topik aktual.
-- `research_quotes` → mencari kandidat quote yang relevan.
-- `verify_quote` → melakukan fact-checking atribusi quote.
-
-Alur:
+## Alur
 
 ```
-Goal
+Riset berita Indonesia (Google News, fallback DuckDuckGo/Bing)
  ↓
-Research Topic
+Pilih topik
  ↓
-Agent memilih topik
+Cari halaman sumber kutipan → ekstrak quote dari halaman
  ↓
-Research Quotes
+Verifikasi quote
+ ├── VERIFIED   → lanjut
+ └── UNCERTAIN / REJECTED → berhenti
  ↓
-Agent memilih kandidat
+Buat konten → evaluasi (maks. 3 percobaan, skor minimal 75)
  ↓
-Verify Quote
- ↓
-Agent
- ├── APPROVE
- ├── RESEARCH_ANOTHER_QUOTE
- └── REJECT
+Buat prompt gambar → publish (belum dikonfigurasi)
 ```
 
-### Prinsip verifikasi
+Quote hanya dipakai bila berstatus **VERIFIED**. Quote yang muncul di banyak situs tidak otomatis dianggap benar.
 
-Quote **tidak dianggap benar hanya karena sering muncul di internet**.
+Topik dan quote yang sudah dipakai disimpan di `data/memory.json` agar tidak berulang.
 
-Agent diminta mencari sumber primer bila memungkinkan, seperti buku, pidato, transkrip, wawancara, arsip, atau penerbit.
-
-Status verifikasi:
-
-- **VERIFIED** → boleh digunakan sebagai direct quote.
-- **UNCERTAIN** → jangan digunakan sebagai direct quote.
-- **REJECTED** → jangan digunakan.
-
-### Menjalankan
+## Menjalankan
 
 ```bash
 pip install -r requirements.txt
+cp .env.example .env   # isi YTCLIP_API_KEY
 python main.py
 ```
 
-Pastikan `.env` berisi `GROQ_API_KEY`.
+Workflow harian ada di `.github/workflows/daily-agent.yml` (butuh secret `YTCLIP_API_KEY`).
 
-Tahap ini belum membuat gambar atau mempublikasikan konten. Fokusnya adalah memastikan agent memiliki pipeline riset dan verifikasi quote sebelum masuk ke produksi konten.
+Tahap publikasi ke Instagram belum diimplementasikan (`tools/publisher.py` masih stub).

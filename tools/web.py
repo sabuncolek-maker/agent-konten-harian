@@ -70,8 +70,6 @@ def _google_news(page, limit):
         title = item.findtext("title", "") or ""
         link = item.findtext("link", "") or ""
         desc = item.findtext("description", "") or ""
-        source = item.find("source")
-        source_name = source.text.strip() if source is not None and source.text else ""
         if link:
             snippet = BeautifulSoup(
                 html.unescape(desc), "html.parser"
@@ -81,7 +79,6 @@ def _google_news(page, limit):
                     "title": title.strip(),
                     "snippet": snippet,
                     "url": link.strip(),
-                    "source": source_name,
                 }
             )
     return out

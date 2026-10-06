@@ -1,2 +1,2 @@
-def publish(content, image_path=None):
+def publish(content):
     return {'status':'NOT_PUBLISHED','reason':'Instagram publisher belum dikonfigurasi.'}
