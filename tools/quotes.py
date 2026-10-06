@@ -1,4 +1,10 @@
-from agent.brain import ask
+from agent.brain import ask, RESEARCH_MODEL
 
-def research_quotes(topic):
-    return ask(f'''Gunakan web search untuk mencari 5 quote terdokumentasi yang relevan dengan topik: {topic}. Jangan mengarang. Sertakan tokoh, quote asli, karya/peristiwa, dan sumber yang dapat ditelusuri.''')
+def research_quotes(topic: str) -> str:
+    return ask(
+        f"""Cari dengan web search 5 kutipan yang benar-benar terdokumentasi dan relevan dengan topik: {topic}.
+Prioritaskan sumber primer seperti buku, pidato, wawancara, transkrip, atau arsip tepercaya.
+Untuk setiap kandidat berikan TOKOH, QUOTE, KONTEKS, dan SUMBER.
+Jangan membuat quote dari ingatan. Jika hanya parafrase, tandai sebagai PARAFRASE.""",
+        model=RESEARCH_MODEL,
+    )
