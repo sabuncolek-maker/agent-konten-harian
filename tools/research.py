@@ -172,9 +172,9 @@ Jawab JSON VALID saja:
 BUKTI WEB:
 {_compact(evidence)}
 """
-    result = ask(prompt, model=FAST_MODEL, max_tokens=1800)
+    result = ask(prompt, model=MODEL, max_tokens=1800)
     data = _extract_json_object(result)
-    if not data or not str(data.get("topic", "")).strip():
+    if (not data or not str(data.get("topic", "")).strip() or str(data.get("topic")).strip() == "..."):
         print(f"[RESEARCH] Invalid JSON response: {result[:1000]!r}", flush=True)
         raise RuntimeError("Research model tidak menghasilkan JSON/topic yang valid.")
     return json.dumps(data, ensure_ascii=False)
@@ -192,9 +192,10 @@ KONTEKS:
 {topic_research}""", model=FAST_MODEL, max_tokens=500)
     try:
         data = _extract_json_object(result)
-        if data:
-            return [str(q).strip() for q in data.get("queries", []) if str(q).strip()][:5]
-        raise ValueError("JSON query tidak valid")
-    except Exception:
+        if data and isinstance(data.get("queries"), list):
+            queries = [str(q).strip() for q in data["queries"] if str(q).strip() and str(q).strip() != "..."]
+            if len(queries) == 5:
+                return queries
+        raise ValueError("Model tidak menghasilkan tepat 5 query valid")
         lines = [line.strip(' -•\\t"') for line in result.splitlines() if line.strip()]
         return lines[:5]
