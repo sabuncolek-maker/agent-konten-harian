@@ -54,16 +54,12 @@ def verify_quote(person: str, quote: str, source_hint: str = "") -> str:
                     }
                 )
 
-    compact = "
-".join(
+    compact = "\n".join(
         f"[SEARCH {i}] {x['title']} | {x['snippet']} | {x['url']}"
         for i, x in enumerate(evidence[:15], 1)
     )
-    page_evidence = "
-
-".join(
-        f"[PAGE {i}] URL={x['url']} DOMAIN={x['domain']}
-{x['text']}"
+    page_evidence = "\n\n".join(
+        f"[PAGE {i}] URL={x['url']} DOMAIN={x['domain']}\n{x['text']}"
         for i, x in enumerate(pages[:5], 1)
     ) or "(Tidak ada halaman sumber yang berhasil diambil.)"
 
