@@ -1,8 +1,13 @@
-from agent.brain import ask
-
-def create_plan(goal):
-    return ask(f'''Kamu adalah AI Agent pembuat konten kutipan.
-Tujuan: {goal}
-Tentukan tindakan pertama. Jika perlu riset, jawab:
-TOOL: research_topic
-QUERY: <query>''')
+def create_plan(goal: str) -> list[str]:
+    return [
+        "research_topic",
+        "select_topic",
+        "research_quotes",
+        "select_quote",
+        "verify_quote",
+        "generate_content",
+        "evaluate_content",
+        "generate_image_prompt",
+        "publish",
+        "save_memory",
+    ]
