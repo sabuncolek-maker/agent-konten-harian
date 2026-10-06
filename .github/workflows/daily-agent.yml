@@ -22,6 +22,9 @@ jobs:
 
       - run: pip install -r requirements.txt
 
+      - name: Validate Python
+        run: python -m compileall -q agent tools main.py
+
       - name: Run agent
         env:
           YTCLIP_API_KEY: ${{ secrets.YTCLIP_API_KEY }}
