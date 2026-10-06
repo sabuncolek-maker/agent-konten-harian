@@ -1,5 +1,7 @@
 import json
 import time
+from urllib.parse import urlparse
+
 from agent.brain import ask, VERIFICATION_MODEL
 from tools.web import search_web, fetch_page_text
 
@@ -22,11 +24,20 @@ def verify_quote(person: str, quote: str, source_hint: str = "") -> str:
                 evidence.append(item)
 
     if not evidence:
-        result = {"status": "UNCERTAIN", "confidence": 0, "evidence": [], "source": "", "url": "", "reason": "Tidak ada bukti web."}
-        print(f"[VERIFY] DONE {time.monotonic()-started:.1f}s | UNCERTAIN", flush=True)
+        result = {
+            "status": "UNCERTAIN",
+            "confidence": 0,
+            "evidence": [],
+            "source": "",
+            "url": "",
+            "reason": "Tidak ada bukti web.",
+        }
+        print(
+            f"[VERIFY] DONE {time.monotonic()-started:.1f}s | UNCERTAIN",
+            flush=True,
+        )
         return json.dumps(result, ensure_ascii=False)
 
-    # Fetch actual pages instead of trusting search snippets alone.
     pages = []
     urls = [source_hint] + [x["url"] for x in evidence[:4]]
     seen_pages = set()
@@ -35,18 +46,29 @@ def verify_quote(person: str, quote: str, source_hint: str = "") -> str:
             seen_pages.add(url)
             text = fetch_page_text(url)
             if text:
-                pages.append({"url": url, "domain": source_domain(url), "text": text})
+                pages.append(
+                    {
+                        "url": url,
+                        "domain": urlparse(url).netloc,
+                        "text": text,
+                    }
+                )
 
-    compact = "\n".join(
+    compact = "
+".join(
         f"[SEARCH {i}] {x['title']} | {x['snippet']} | {x['url']}"
         for i, x in enumerate(evidence[:15], 1)
     )
-    page_evidence = "\n\n".join(
-        f"[PAGE {i}] URL={x['url']} DOMAIN={x['domain']}\n{x['text']}"
+    page_evidence = "
+
+".join(
+        f"[PAGE {i}] URL={x['url']} DOMAIN={x['domain']}
+{x['text']}"
         for i, x in enumerate(pages[:5], 1)
     ) or "(Tidak ada halaman sumber yang berhasil diambil.)"
 
-    raw = ask(f"""Fact-check kutipan secara konservatif.
+    raw = ask(
+        f"""Fact-check kutipan secara konservatif.
 TOKOH: {person}
 QUOTE: {quote}
 SUMBER KANDIDAT: {source_hint}
@@ -67,7 +89,10 @@ PAGE CONTENT:
 {page_evidence}
 
 Jawab JSON VALID saja:
-{{"status":"VERIFIED|UNCERTAIN|REJECTED","confidence":0,"evidence":"...","source":"...","url":"...","reason":"..."}}""", model=VERIFICATION_MODEL, max_tokens=900)
+{{"status":"VERIFIED|UNCERTAIN|REJECTED","confidence":0,"evidence":"...","source":"...","url":"...","reason":"..."}}""",
+        model=VERIFICATION_MODEL,
+        max_tokens=900,
+    )
 
     try:
         data = json.loads(raw)
@@ -76,7 +101,17 @@ Jawab JSON VALID saja:
             status = "UNCERTAIN"
         data["status"] = status
     except Exception:
-        data = {"status": "UNCERTAIN", "confidence": 0, "evidence": [], "source": "", "url": "", "reason": "Verifier tidak menghasilkan JSON valid."}
+        data = {
+            "status": "UNCERTAIN",
+            "confidence": 0,
+            "evidence": [],
+            "source": "",
+            "url": "",
+            "reason": "Verifier tidak menghasilkan JSON valid.",
+        }
 
-    print(f"[VERIFY] DONE {time.monotonic()-started:.1f}s | {data['status']}", flush=True)
+    print(
+        f"[VERIFY] DONE {time.monotonic()-started:.1f}s | {data['status']}",
+        flush=True,
+    )
     return json.dumps(data, ensure_ascii=False)
