@@ -1,28 +1,19 @@
-from agent.brain import ask, RESEARCH_MODEL
+from tools.research import web_search
 
 def research_quotes(topic: str) -> str:
-    return ask(
-        f"""Gunakan browser search sungguhan.
+    queries = [
+        f'"{topic}" quote interview speech',
+        f'"{topic}" quote book speech',
+        f'"{topic}" "said" quote',
+    ]
+    results = []
+    for query in queries:
+        try:
+            results.extend(web_search(query, 5))
+        except Exception:
+            continue
 
-Cari 5 kutipan yang benar-benar terdokumentasi dan relevan dengan topik:
-{topic}
-
-Syarat WAJIB:
-- Kutipan harus berasal dari manusia nyata yang dapat diidentifikasi.
-- Prioritaskan sumber primer: buku, pidato, wawancara, transkrip, arsip resmi, atau publikasi asli.
-- Jangan gunakan respons AI, Reddit, forum, screenshot percakapan, blog anonim, atau halaman yang hanya menyalin quote sebagai bukti utama.
-- Jangan membuat quote dari ingatan.
-- Jika hanya parafrase, tandai PARAFRASE dan jangan jadikan kandidat quote langsung.
-
-Untuk setiap kandidat berikan:
-TOKOH:
-QUOTE:
-KONTEKS:
-SUMBER PRIMER:
-URL:
-
-Jika tidak menemukan bukti yang cukup, katakan TIDAK ADA KANDIDAT TERVERIFIKASI.""",
-        model=RESEARCH_MODEL,
-        web_search=True,
-        max_tokens=2200,
-    )
+    lines = []
+    for r in results[:15]:
+        lines.append(f"TITLE: {r['title']}\nSNIPPET: {r['snippet']}\nURL: {r['url']}")
+    return "\n\n".join(lines)
