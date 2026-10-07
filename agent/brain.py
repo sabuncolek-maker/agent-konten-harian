@@ -22,7 +22,7 @@ import os
 # Model default tiap provider (bisa ditimpa via LLM_MODEL).
 # Dipilih yang gratis/murah & cukup pintar untuk generate konten.
 _DEFAULT_MODELS = {
-    "groq": "gpt-oss-120b",
+    "groq": "openai/gpt-oss-120b"  # prefix openai/ wajib di Groq,
     "gemini": "gemini-2.0-flash",
     "openrouter": "google/gemma-4-31b-it:free",  # update Okt 2026: deepseek free sudah tidak tersedia
 }
