@@ -11,12 +11,26 @@ def run(state, cfg, memory) -> None:
     """Generate slide-slide carousel dan caption."""
     max_slides = cfg["content"]["max_slides"]
 
+    # ATURAN KERAS #5: kutipan harus ASLI, bukan karangan.
+    # KENAPA: LLM suka mengarang kutipan yang terdengar meyakinkan tapi palsu
+    # (halusinasi) — apalagi kalau diminta membuat kutipan tokoh lama tentang
+    # topik modern. Verifier akan menolaknya dan run jadi sia-sia.
+    # Solusi: pakai kutipan asli yang memang dikenal luas, lalu KAITKAN ke
+    # topik modern lewat penjelasan di slide — bukan dengan mengarang kutipan baru.
     prompt = (
         f"Kamu adalah content writer Instagram Indonesia.\n"
         f"Topik: {state.topic}\nTokoh: {state.subject}\n\n"
-        f"Buat carousel {max_slides} slide tentang pemikiran {state.subject} "
-        f"yang relevan dengan topik di atas. Slide 1 = hook yang memancing rasa "
-        f"penasaran. Slide terakhir = ajakan follow/refleksi.\n\n"
+        f"Buat carousel {max_slides} slide tentang {state.subject}.\n"
+        f"ATURAN WAJIB:\n"
+        f"1. Kutipan yang ditampilkan HARUS kutipan asli {state.subject} yang "
+        f"benar-benar dikenal luas (dari buku, pidato, atau tulisan resminya). "
+        f"DILARANG mengarang kutipan baru atau parafrasa bebas yang diklaim "
+        f"sebagai perkataannya.\n"
+        f"2. Kaitkan kutipan asli tersebut dengan topik di atas lewat "
+        f"penjelasanmu di slide-slide berikutnya — bukan dengan membuat "
+        f"kutipan palsu tentang topik modern.\n"
+        f"3. Slide 1 = hook yang memancing rasa penasaran. "
+        f"Slide terakhir = ajakan follow/refleksi.\n\n"
         "Jawab HANYA JSON valid, tanpa teks lain:\n"
         '{"slides": ["<teks slide 1>", "<teks slide 2>", ...], '
         '"caption": "<caption Instagram + 3 hashtag>"}'
