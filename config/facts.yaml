@@ -6,7 +6,7 @@ niche: facts
 description: "Konten fakta unik flora, fauna, dan alam Indonesia"
 
 llm:
-  model: "gpt-oss-120b"
+  model: "openai/gpt-oss-120b:free"
   temperature: 0.8
   max_tokens: 1500
 
