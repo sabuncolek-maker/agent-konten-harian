@@ -13,7 +13,7 @@ llm:
   # Isi manual hanya kalau niche ini butuh model khusus, misal "openai/gpt-oss-120b:free".
   model: ""
   temperature: 0.7
-  max_tokens: 1500
+  max_tokens: 3000  # dinaikkan Okt 2026: prompt bertambah (tone + aturan kutipan asli), 1500 bikin respons kepotong
 
 # Arah riset topik — ubah sesukamu tanpa sentuh kode.
 research:
