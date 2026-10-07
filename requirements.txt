@@ -4,6 +4,7 @@
 groq==0.9.0
 google-generativeai==0.8.3
 openai==1.54.0
+httpx==0.27.2  # kompatibel dengan openai 1.54.0 (0.28+ hapus argumen proxies)
 playwright==1.40.0
 pyyaml==6.0.1
 requests==2.31.0
