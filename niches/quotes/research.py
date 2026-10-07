@@ -11,6 +11,10 @@ def run(state, cfg, memory) -> None:
     """Pilih topik & tokoh. Melewati tokoh yang sudah pernah dipakai."""
     import random
     used = [s.lower() for s in memory["used_subjects"]]
+    # Ide A: hindari juga tokoh yang ditolak verifikasi di run ini.
+    # KENAPA: tanpa ini, retry bisa memilih tokoh yang sama berulang-ulang.
+    rejected = [s.lower() for s in getattr(state, "rejected_subjects", [])]
+    banned = used + rejected
 
     # Baca mood dari config (default: serius, sesuai perilaku lama).
     # KENAPA ada mood: tidak semua hari cocok untuk topik berat — kadang
@@ -48,7 +52,7 @@ def run(state, cfg, memory) -> None:
     # Anti-duplikat: kalau tokoh sudah dipakai, minta LLM pilih yang lain (maks 3x).
     # KENAPA: tanpa ini, agent bisa posting tokoh yang sama berulang-ulang.
     for _ in range(3):
-        if data["person"].strip().lower() not in used:
+        if data["person"].strip().lower() not in banned:
             break
         raw = brain.ask(
             prompt + f"\n\nPENTING: jangan pilih {data['person']}, sudah pernah dipakai. Pilih tokoh lain.",
