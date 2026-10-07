@@ -27,14 +27,6 @@ jobs:
       - name: Validate Python syntax
         run: python -m compileall -q agent niches tools main.py
 
-      - name: Upload hasil (bisa di-download)
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: hasil-konten-${{ github.run_number }}
-          path: data/slides/
-          if-no-files-found: warn
-
 
       - name: Run agent (quotes)
         env:
@@ -47,6 +39,14 @@ jobs:
           IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
           IMGBB_API_KEY: ${{ secrets.IMGBB_API_KEY }}
         run: python main.py --config config/quotes.yaml
+
+      - name: Upload hasil (bisa di-download)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hasil-konten-${{ github.run_number }}
+          path: data/slides/
+          if-no-files-found: warn
 
       - name: Simpan memory
         run: |
