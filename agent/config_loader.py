@@ -50,4 +50,45 @@ def load_config(path: str) -> dict:
     if not cfg["pipeline"]:
         raise ValueError(f"Config {path}: 'pipeline' tidak boleh kosong.")
 
+    _validate_optional_fields(cfg, path)
     return cfg
+
+
+def _validate_optional_fields(cfg: dict, path: str) -> None:
+    """Validasi field opsional yang ditambahkan belakangan.
+
+    KENAPA ini ada (pelajaran audit): field baru seperti research.mood atau
+    quotes.scope sebelumnya tidak divalidasi — typo (misal "scop") tidak
+    ketahuan dan diam-diam memakai nilai default. Sekarang typo = error jelas.
+    """
+    mood = cfg.get("research", {}).get("mood")
+    if mood and mood not in ("serius", "ringan", "campuran"):
+        raise ValueError(
+            f"Config {path}: research.mood '{mood}' tidak valid. "
+            "Pilih: serius, ringan, campuran."
+        )
+
+    retries = cfg.get("verification", {}).get("max_retries")
+    if retries is not None and (not isinstance(retries, int) or retries < 0):
+        raise ValueError(
+            f"Config {path}: verification.max_retries harus angka bulat >= 0."
+        )
+
+    scope = cfg.get("quotes", {}).get("scope")
+    if scope and scope not in ("indonesia", "internasional", "campuran"):
+        raise ValueError(
+            f"Config {path}: quotes.scope '{scope}' tidak valid. "
+            "Pilih: indonesia, internasional, campuran."
+        )
+
+    max_tokens = cfg.get("llm", {}).get("max_tokens")
+    if max_tokens is not None and (
+        not isinstance(max_tokens, int) or max_tokens <= 0
+    ):
+        raise ValueError(
+            f"Config {path}: llm.max_tokens harus angka bulat > 0."
+        )
+
+    tone = cfg.get("style", {}).get("tone")
+    if tone is not None and not str(tone).strip():
+        raise ValueError(f"Config {path}: style.tone tidak boleh kosong.")
