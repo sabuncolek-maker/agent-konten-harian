@@ -37,15 +37,33 @@ def run(config_path: str) -> AgentState:
     mem = memory.load_memory()
 
     try:
-        # --- Tahap pipeline sesuai config (research/generate/verify) ---
-        for step in cfg["pipeline"]:
-            mod = _load_niche_module(niche, step)
-            mod.run(state, cfg, mem)
-            # Verifikasi bisa menolak konten → hentikan run ini dengan aman.
-            if step == "verify" and state.verification.startswith("REJECTED"):
-                state.error = f"Konten ditolak verifikasi: {state.verification}"
-                print(f"[ORCHESTRATOR] {state.error}", flush=True)
-                return state  # return, BUKAN crash — ini hasil yang valid
+        # --- Tahap pipeline dengan retry saat verifikasi menolak (ide A) ---
+        # KENAPA: LLM sering mengarang kutipan tokoh → verifier menolak.
+        # Daripada run gagal total, coba lagi dari research dengan tokoh lain
+        # (maks 1 + max_retries tokoh berbeda). State di-reset fresh tiap
+        # percobaan agar tidak tercampur.
+        max_v_retries = cfg.get("verification", {}).get("max_retries", 2)
+        rejected = []
+        for v_attempt in range(max_v_retries + 1):
+            state = AgentState(niche=niche)
+            state.rejected_subjects = rejected
+            for step in cfg["pipeline"]:
+                mod = _load_niche_module(niche, step)
+                mod.run(state, cfg, mem)
+                if step == "verify" and state.verification.startswith("REJECTED"):
+                    rejected.append(state.subject)
+                    print(f"[ORCHESTRATOR] verifikasi ditolak, coba tokoh lain "
+                          f"({v_attempt + 1}/{max_v_retries + 1})", flush=True)
+                    break  # keluar dari for-step, lanjut ke percobaan berikutnya
+            else:
+                break  # for-step selesai tanpa break = lolos verifikasi
+        else:
+            # KENAPA pakai for-else: blok ini jalan kalau loop habis TANPA break,
+            # artinya semua tokoh ditolak verifikasi.
+            state.error = (f"Verifikasi ditolak {max_v_retries + 1}x berturut-turut "
+                           f"(tokoh dicoba: {', '.join(rejected)}).")
+            print(f"[ORCHESTRATOR] {state.error}", flush=True)
+            return state  # return, BUKAN crash — ini hasil yang valid
 
         # --- Evaluasi + coba ulang generate kalau skor kurang ---
         min_score = cfg["evaluation"]["min_score"]
