@@ -22,12 +22,17 @@ def run(state, cfg, memory) -> None:
     quote = getattr(state, "verified_quote", "")
     honorific = getattr(state, "quote_honorific", state.subject)
     qcontext = getattr(state, "quote_context", "")
+    # Nama lengkap resmi untuk ATRIBUSI kutipan (bukan honorific).
+    # KENAPA: "— Pak Hajar" terlihat seperti mengutip orang sembarang.
+    # Atribusi kutipan = identitas resmi ("— Ki Hajar Dewantara").
+    # Honorific (Pak/Bu/Beliau) hanya untuk kalimat narasi kita.
+    full_name = state.subject
     if not quote:
         raise RuntimeError("Tidak ada kutipan terverifikasi di state. Research gagal?")
     prompt = (
         f"Kamu adalah content writer Instagram Indonesia.\n"
         f"KUTIPAN ASLI (JANGAN diubah, JANGAN diparafrasa, tulis persis seperti ini):\n"
-        f"\"{quote}\" — {honorific}\n"
+        f"\"{quote}\" — {full_name}\n"
         f"Konteks kutipan: {qcontext}\n"
         f"Tema: {state.topic}\n\n"
         f"Buat carousel {max_slides} slide tentang {state.subject}.\n"
@@ -36,7 +41,7 @@ def run(state, cfg, memory) -> None:
         f"jangan diubah atau diparafrasa.\n"
         f"2. Slide 1 = hook yang memancing rasa penasaran (jangan langsung "
         f"tampilkan kutipannya).\n"
-        f"3. Slide 2 = tampilkan kutipan persis + nama {honorific}.\n"
+        f"3. Slide 2 = tampilkan kutipan persis + nama lengkap resmi ({full_name}).\n"
         f"4. Slide 3-4 = jelaskan makna kutipan dan kaitannya dengan kehidupan "
         f"sehari-hari, dengan bumbu puitis/filosofis/humor yang sopan.\n"
         f"5. Slide terakhir = ajakan follow/refleksi yang ringan.\n\n"
