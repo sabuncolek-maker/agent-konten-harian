@@ -15,6 +15,13 @@ llm:
   temperature: 0.7
   max_tokens: 1500
 
+# Arah riset topik — ubah sesukamu tanpa sentuh kode.
+research:
+  mood: "campuran"  # pilihan: "serius" | "ringan" | "campuran"
+  # serius : isu sosial yang sedang relevan (pendidikan, kesetaraan, lingkungan, dll)
+  # ringan : topik fun — kisah unik tokoh, fakta menarik, pelajaran hidup yang ringan
+  # campuran: acak setiap run, kadang serius kadang ringan
+
 # Aturan pipeline: urutan langkah yang dijalankan orchestrator
 # Setiap langkah = nama modul di niches/quotes/
 pipeline:
