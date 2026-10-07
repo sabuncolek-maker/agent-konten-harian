@@ -7,7 +7,7 @@ description: "Konten kutipan tokoh Indonesia yang relevan dengan kondisi saat in
 
 # LLM yang dipakai untuk niche ini
 llm:
-  model: "gpt-oss-120b"
+  model: "openai/gpt-oss-120b:free"
   temperature: 0.7
   max_tokens: 1500
 
