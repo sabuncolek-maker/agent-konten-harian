@@ -103,6 +103,7 @@ def _ask_openrouter(prompt: str, model: str, temperature: float, max_tokens: int
             "OPENROUTER_API_KEY belum diset. Isi di .env atau GitHub Secrets. "
             "Dapatkan di https://openrouter.ai/keys"
         )
+    import time
     from openai import OpenAI, RateLimitError, NotFoundError
     client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=api_key)
 
@@ -110,25 +111,34 @@ def _ask_openrouter(prompt: str, model: str, temperature: float, max_tokens: int
     # KENAPA: tier gratis sering 429 (penuh) / 404 (model ditarik) — daripada
     # run gagal total, coba model gratis lain secara otomatis.
     candidates = [model] + [m for m in _FALLBACK_FREE_MODELS if m != model]
+
+    # KENAPA ada ronde ulang: rate limit gratisan biasanya pulih dalam
+    # puluhan detik. Daripada gagal, tunggu 30 detik lalu coba semua lagi
+    # (maksimal 3 ronde).
     last_err = None
-    for cand in candidates:
-        try:
-            resp = client.chat.completions.create(
-                model=cand,
-                messages=[{"role": "user", "content": prompt}],
-                temperature=temperature,
-                max_tokens=max_tokens,
-            )
-            text = (resp.choices[0].message.content or "").strip()
-            if cand != model:
-                print(f"[LLM] fallback: {model} gagal, pakai {cand}", flush=True)
-            return text
-        except (RateLimitError, NotFoundError) as exc:
-            print(f"[LLM] {cand} tidak bisa dipakai ({type(exc).__name__}), coba berikutnya...",
+    for round_no in range(1, 4):
+        for cand in candidates:
+            try:
+                resp = client.chat.completions.create(
+                    model=cand,
+                    messages=[{"role": "user", "content": prompt}],
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                )
+                text = (resp.choices[0].message.content or "").strip()
+                if cand != model:
+                    print(f"[LLM] fallback: {model} gagal, pakai {cand}", flush=True)
+                return text
+            except (RateLimitError, NotFoundError) as exc:
+                print(f"[LLM] {cand} tidak bisa dipakai ({type(exc).__name__}), coba berikutnya...",
+                      flush=True)
+                last_err = exc
+        if round_no < 3:
+            print(f"[LLM] ronde {round_no} habis, tunggu 30 detik sebelum coba lagi...",
                   flush=True)
-            last_err = exc
+            time.sleep(30)
     raise RuntimeError(
-        f"Semua model gratis habis/tidak tersedia. Terakhir: {last_err}"
+        f"Semua model gratis habis/tidak tersedia setelah 3 ronde. Terakhir: {last_err}"
     )
 
 
