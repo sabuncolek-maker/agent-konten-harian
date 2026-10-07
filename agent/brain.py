@@ -24,7 +24,7 @@ import os
 _DEFAULT_MODELS = {
     "groq": "gpt-oss-120b",
     "gemini": "gemini-2.0-flash",
-    "openrouter": "deepseek/deepseek-chat:free",
+    "openrouter": "google/gemma-4-31b-it:free"  # update Okt 2026: deepseek free sudah tidak tersedia,
 }
 
 
