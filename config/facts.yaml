@@ -19,6 +19,17 @@ pipeline:
   - generate
   - verify      # verifikasi: fakta harus masuk akal & tidak ngawur
 
+# Gaya bahasa konten — ubah sesukamu tanpa sentuh kode.
+# KENAPA ada di config: selera bahasa itu preferensi pribadi, bukan logika program.
+style:
+  tone: >-
+    Bahasa Indonesia santai seperti ngobrol di tongkrongan tapi tetap sopan.
+    Langsung ke inti, pakai "kamu", kalimat pendek-pendek. HINDARI bahasa
+    formal/kaku seperti "dukung gerakan", "bagikan pendapatmu", "menerapkan
+    semangat", "inspirasi lebih banyak". Slide terakhir: ajakan ringan seperti
+    ngajak teman ngobrol, bukan pengumuman resmi. Contoh nada yang benar:
+    "Gimana menurut kamu? Tulis di komentar ya 👇" — bukan "bagikan pendapatmu".
+
 content:
   max_slides: 4
   min_words_per_slide: 10
