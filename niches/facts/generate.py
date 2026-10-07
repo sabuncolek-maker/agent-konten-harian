@@ -14,6 +14,12 @@ def run(state, cfg, memory) -> None:
         "Jawab HANYA JSON valid:\n"
         '{"slides": ["<teks slide 1>", ...], "caption": "<caption + hashtag>"}'
     )
+    # Ambil gaya bahasa dari config (cfg["style"]["tone"]).
+    # KENAPA pakai .get(): kalau config lama tidak punya bagian "style",
+    # kode tetap jalan tanpa error — tone jadi string kosong.
+    tone = cfg.get("style", {}).get("tone", "").strip()
+    if tone:
+        prompt = f"Gaya bahasa yang WAJIB dipakai:\n{tone}\n\n" + prompt
     raw = brain.ask(prompt, model=cfg["llm"]["model"],
                     temperature=cfg["llm"]["temperature"],
                     max_tokens=cfg["llm"]["max_tokens"])
