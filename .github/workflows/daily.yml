@@ -27,6 +27,15 @@ jobs:
       - name: Validate Python syntax
         run: python -m compileall -q agent niches tools main.py
 
+      - name: Upload hasil (bisa di-download)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hasil-konten-${{ github.run_number }}
+          path: data/slides/
+          if-no-files-found: warn
+
+
       - name: Run agent (quotes)
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
