@@ -1,3 +1,11 @@
+# Kredensial JANGAN PERNAH masuk git (aturan keras #5)
 .env
+
+# Cache Python
 __pycache__/
 *.pyc
+
+# Riwayat agent (berubah tiap run, tidak perlu di-versioning manual;
+# workflow yang akan commit otomatis setelah publish sukses)
+data/memory.json
+data/slides/

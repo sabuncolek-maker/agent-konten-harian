@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<!-- Template carousel Instagram 1080x1350.
+     Dipakai oleh tools/image.py: tiap slide di-render jadi 1 file PNG.
+     Variabel Jinja2: {{ slide_text }}, {{ slide_num }}, {{ total_slides }}, {{ niche_label }} -->
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 1080px; height: 1350px;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: linear-gradient(160deg, #0f2027, #203a43, #2c5364);
+    color: #ffffff;
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: center;
+    padding: 90px; text-align: center;
+  }
+  .label {
+    font-size: 28px; letter-spacing: 6px; text-transform: uppercase;
+    color: #ffd166; margin-bottom: 30px;
+  }
+  .text {
+    font-size: 52px; font-weight: 700; line-height: 1.45;
+  }
+  .counter {
+    margin-top: 50px; font-size: 26px; color: #aaaaaa;
+  }
+  .bar {
+    margin-top: 14px; width: 200px; height: 6px;
+    background: #ffffff22; border-radius: 3px; overflow: hidden;
+  }
+  .bar > div { height: 100%; background: #ffd166; }
+</style>
+</head>
+<body>
+  <div class="label">{{ niche_label }}</div>
+  <div class="text">{{ slide_text }}</div>
+  <div class="counter">{{ slide_num }} / {{ total_slides }}</div>
+  <div class="bar"><div style="width: {{ pct }}%"></div></div>
+</body>
+</html>

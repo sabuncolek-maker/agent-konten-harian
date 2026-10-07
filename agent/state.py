@@ -1,5 +1,26 @@
-from dataclasses import dataclass,field
+"""Wadah data yang dibawa agent sepanjang pipeline.
+
+KENAPA pakai dataclass:
+- Semua tahap (research → generate → verify → evaluate → publish) butuh akses
+  ke data yang sama. Tanpa wadah resmi, data dioper via banyak variabel
+  lepas → gampang typo & susah dilacak.
+- Dataclass = struktur data yang rapi + tetap sederhana (bukan class berat).
+"""
+
+from dataclasses import dataclass, field
+
+
 @dataclass
 class AgentState:
-    goal:str; topic:str=""; context:str=""; person:str=""; quote:str=""; source:str=""; verification:str=""; content:str=""; evaluation:str=""; image_prompt:str=""; status:str="STARTING"; events:list[str]=field(default_factory=list)
-    def log(self,message): self.events.append(message); print(f"[AGENT] {message}",flush=True)
+    """Satu objek ini dibawa dari awal sampai akhir pipeline."""
+
+    niche: str = ""            # nama niche aktif, misal "quotes"
+    topic: str = ""            # topik/isu yang dipilih tahap research
+    subject: str = ""          # subjek utama (tokoh / objek fakta)
+    content: str = ""          # isi konten final (teks per slide)
+    slides: list = field(default_factory=list)  # list teks per slide
+    caption: str = ""          # caption Instagram
+    verification: str = ""     # hasil verifikasi ("VERIFIED" / "REJECTED: alasan")
+    score: int = 0             # skor evaluasi 0-100
+    published: bool = False    # True HANYA jika publisher return True
+    error: str = ""            # pesan error kalau pipeline gagal di tengah

@@ -1,0 +1,32 @@
+# Konfigurasi niche: FAKTA UNIK
+# Cara pakai: python main.py --config config/facts.yaml
+# Contoh niche kedua — bukti bahwa tambah niche = cukup bikin file config + modul di niches/facts/
+
+niche: facts
+description: "Konten fakta unik flora, fauna, dan alam Indonesia"
+
+llm:
+  model: "gpt-oss-120b"
+  temperature: 0.8
+  max_tokens: 1500
+
+pipeline:
+  - research
+  - generate
+  - verify      # verifikasi: fakta harus masuk akal & tidak ngawur
+
+content:
+  max_slides: 4
+  min_words_per_slide: 10
+  language: "id"
+  caption_hashtags:
+    - "#faktaunik"
+    - "#floraindonesia"
+    - "#faunaindonesia"
+
+evaluation:
+  min_score: 75
+  max_retries: 3
+
+memory:
+  avoid_repeat_days: 30

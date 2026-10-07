@@ -1,0 +1,38 @@
+# Konfigurasi niche: KUTIPAN tokoh Indonesia
+# Cara pakai: python main.py --config config/quotes.yaml
+# Mau ganti niche? Cukup tunjuk ke file config lain, tidak perlu ubah kode!
+
+niche: quotes
+description: "Konten kutipan tokoh Indonesia yang relevan dengan kondisi saat ini"
+
+# LLM yang dipakai untuk niche ini
+llm:
+  model: "gpt-oss-120b"
+  temperature: 0.7
+  max_tokens: 1500
+
+# Aturan pipeline: urutan langkah yang dijalankan orchestrator
+# Setiap langkah = nama modul di niches/quotes/
+pipeline:
+  - research    # cari topik/isu yang sedang relevan
+  - generate    # buat draf konten kutipan
+  - verify      # verifikasi keaslian kutipan (konservatif: ragu = tolak)
+
+# Batasan konten
+content:
+  max_slides: 5          # jumlah slide carousel
+  min_words_per_slide: 8
+  language: "id"         # bahasa konten
+  caption_hashtags:
+    - "#kutipan"
+    - "#tokohindonesia"
+    - "#motivasi"
+
+# Evaluasi: konten harus skor >= 75 baru boleh dipublish
+evaluation:
+  min_score: 75
+  max_retries: 3         # coba ulang maksimal 3x kalau skor kurang
+
+# Anti-duplikat: jangan pakai tokoh yang sudah dipakai N hari terakhir
+memory:
+  avoid_repeat_days: 30

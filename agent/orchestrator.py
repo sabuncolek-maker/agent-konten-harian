@@ -1,104 +1,92 @@
-import json
+"""Konduktor utama: membaca config → memilih pipeline niche → menjalankan
+tahap demi tahap dengan error handling yang jelas.
 
-from agent.brain import RateLimitError
-from agent.memory import load_memory, save_memory
+Urutan:
+  research → generate → verify → evaluate (coba ulang maks N kali)
+  → render gambar → publish → simpan memory (HANYA jika publish sukses)
+
+KENAPA niche di-import dinamis (importlib):
+- Orchestrator tidak perlu tahu daftar niche apa saja yang ada.
+- Tambah niche baru = cukup bikin folder niches/<nama>/ + config — file ini
+  TIDAK PERLU diubah sama sekali.
+"""
+
+import importlib
+
+from agent import config_loader, memory
 from agent.state import AgentState
-from tools.web import search_current_indonesia
-from tools.topic import choose_topic
-from tools.quotes import find_quotes, choose_quote
-from tools.verification import verify_quote
-from tools.content import generate_content
-from tools.evaluator import evaluate_content, parse_evaluation
-from tools.image import generate_image_prompt
-from tools.publisher import publish
+from tools import evaluator, image as image_tool, publisher
 
 
-def run(goal):
-    s = AgentState(goal=goal)
-    mem = load_memory()
+def _load_niche_module(niche: str, step: str):
+    """Import niches.<niche>.<step> secara dinamis."""
+    try:
+        return importlib.import_module(f"niches.{niche}.{step}")
+    except ImportError as exc:
+        raise RuntimeError(
+            f"Niche '{niche}' tidak punya modul '{step}.py'. "
+            f"Buat file niches/{niche}/{step}.py dulu."
+        ) from exc
+
+
+def run(config_path: str) -> AgentState:
+    """Jalankan satu siklus agent penuh. Kembalikan state akhir."""
+    cfg = config_loader.load_config(config_path)
+    niche = cfg["niche"]
+    state = AgentState(niche=niche)
+    mem = memory.load_memory()
 
     try:
-        s.log("Mengamati kondisi Indonesia dari beberapa jalur riset.")
-        ev = search_current_indonesia(10)
-        if not ev:
-            raise RuntimeError("Semua jalur riset web tidak menghasilkan bukti.")
+        # --- Tahap pipeline sesuai config (research/generate/verify) ---
+        for step in cfg["pipeline"]:
+            mod = _load_niche_module(niche, step)
+            mod.run(state, cfg, mem)
+            # Verifikasi bisa menolak konten → hentikan run ini dengan aman.
+            if step == "verify" and state.verification.startswith("REJECTED"):
+                state.error = f"Konten ditolak verifikasi: {state.verification}"
+                print(f"[ORCHESTRATOR] {state.error}", flush=True)
+                return state  # return, BUKAN crash — ini hasil yang valid
 
-        s.topic, s.context = choose_topic(
-            goal, ev, mem.get("used_topics", [])
-        )
-        s.log(f"Kondisi terpilih: {s.topic}")
-
-        s.log("Mencari quote dari tokoh/pendahulu.")
-        c = find_quotes(
-            s.topic, s.context, mem.get("used_quotes", [])
-        )
-        if not c:
-            raise RuntimeError("Tidak menemukan kandidat quote.")
-
-        q = choose_quote(c, s.context)
-        if not q:
-            raise RuntimeError("Tidak ada kandidat quote yang layak.")
-
-        s.person = q["person"]
-        s.quote = q["quote"]
-        s.source = q["url"]
-        s.log(f"Kandidat quote: {s.person} — {s.quote}")
-
-        s.verification = verify_quote(
-            s.person, s.quote, s.source
-        )
-        if json.loads(s.verification).get("status") != "VERIFIED":
-            s.status = "STOPPED_QUOTE_NOT_VERIFIED"
-            s.log("Quote tidak terverifikasi; agent berhenti.")
-            save_memory(mem)
-            return s
-
-        for attempt in range(3):
-            s.content = generate_content(
-                s.topic,
-                s.context,
-                s.person,
-                s.quote,
-                s.verification,
-            )
-            s.evaluation = evaluate_content(
-                s.topic, s.quote, s.content
-            )
-            score, decision, _ = parse_evaluation(s.evaluation)
-            s.log(f"Evaluasi {score}/100 — {decision}")
-
-            if decision == "PASS" and score >= 75:
+        # --- Evaluasi + coba ulang generate kalau skor kurang ---
+        min_score = cfg["evaluation"]["min_score"]
+        max_retries = cfg["evaluation"]["max_retries"]
+        for attempt in range(max_retries + 1):
+            state.score = evaluator.evaluate(state, cfg)
+            if state.score >= min_score:
                 break
+            if attempt < max_retries:
+                print(f"[ORCHESTRATOR] skor {state.score} < {min_score}, "
+                      f"coba generate ulang ({attempt + 1}/{max_retries})", flush=True)
+                gen_mod = _load_niche_module(niche, "generate")
+                gen_mod.run(state, cfg, mem)
+        else:
+            # KENAPA pakai for-else: blok ini jalan kalau loop habis TANPA break,
+            # artinya semua percobaan gagal mencapai skor minimal.
+            state.error = f"Skor maksimal {state.score} < {min_score} setelah {max_retries}x coba."
+            print(f"[ORCHESTRATOR] {state.error}", flush=True)
+            return state
 
-            if attempt == 2:
-                s.status = "STOPPED_CONTENT_FAILED"
-                save_memory(mem)
-                return s
+        # --- Render gambar (jumlah slide dinamis dari state.slides) ---
+        label = {"quotes": "KUTIPAN", "facts": "FAKTA UNIK"}.get(niche, niche.upper())
+        image_paths = image_tool.render_slides(state.slides, label)
 
-        s.image_prompt = generate_image_prompt(s.content)
-        s.status = publish(s.content).get("status", "READY")
+        # --- Publish ---
+        published = publisher.publish_carousel(image_paths, state.caption)
+        state.published = published
 
-        mem.setdefault("used_quotes", []).append(s.quote)
-        mem.setdefault("used_topics", []).append(s.topic)
-        mem.setdefault("published", []).append(
-            {
-                "topic": s.topic,
-                "person": s.person,
-                "quote": s.quote,
-                "source": s.source,
-                "status": s.status,
-            }
-        )
-        save_memory(mem)
-        return s
+        # --- ATURAN KERAS #1: simpan memory HANYA jika publish sukses ---
+        # KENAPA: kalau dicatat sebelum sukses, item yang gagal tayang tidak
+        # akan pernah dipilih lagi (dianggap sudah tayang) — data jadi bohong.
+        if published:
+            memory.mark_published(mem, niche, state.subject)
+            memory.save_memory(mem)
+        else:
+            state.error = "Publish gagal, memory TIDAK disimpan (subjek bisa dicoba lagi besok)."
 
-    except RateLimitError as e:
-        s.status = "RATE_LIMITED"
-        s.log(str(e))
-        save_memory(mem)
-        return s
-    except Exception as e:
-        s.status = "ERROR"
-        s.log(f"Error: {type(e).__name__}: {e}")
-        save_memory(mem)
-        return s
+    except Exception as exc:
+        # KENAPA tangkap di sini: supaya run yang gagal tetap menghasilkan
+        # state yang informatif (bukan traceback mentah di log GitHub Actions).
+        state.error = f"{type(exc).__name__}: {exc}"
+        print(f"[ORCHESTRATOR] ERROR: {state.error}", flush=True)
+
+    return state

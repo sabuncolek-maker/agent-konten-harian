@@ -1,3 +1,9 @@
-openai
-python-dotenv
-beautifulsoup4
+# ATURAN KERAS: semua versi di-PIN.
+# KENAPA: kalau tidak di-pin, library bisa update diam-diam dan mengubah
+# perilaku → workflow yang kemarin jalan tiba-tiba rusak tanpa ada yang diubah.
+groq==0.9.0
+playwright==1.40.0
+pyyaml==6.0.1
+requests==2.31.0
+jinja2==3.1.2
+python-dotenv==1.0.0
