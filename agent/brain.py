@@ -24,8 +24,18 @@ import os
 _DEFAULT_MODELS = {
     "groq": "gpt-oss-120b",
     "gemini": "gemini-2.0-flash",
-    "openrouter": "google/gemma-4-31b-it:free"  # update Okt 2026: deepseek free sudah tidak tersedia,
+    "openrouter": "google/gemma-4-31b-it:free",  # update Okt 2026: deepseek free sudah tidak tersedia
 }
+
+# Model gratis cadangan untuk OpenRouter (urutan prioritas).
+# KENAPA: model gratis berbagi rate limit publik — kalau satu penuh (429)
+# atau hilang (404), otomatis coba yang berikutnya tanpa campur tangan user.
+_FALLBACK_FREE_MODELS = [
+    "google/gemma-4-31b-it:free",
+    "google/gemma-4-26b-a4b-it:free",
+    "nvidia/nemotron-3-ultra-550b-a55b:free",
+    "thinkingmachines/inkling:free",
+]
 
 
 def _get_provider() -> str:
@@ -93,15 +103,33 @@ def _ask_openrouter(prompt: str, model: str, temperature: float, max_tokens: int
             "OPENROUTER_API_KEY belum diset. Isi di .env atau GitHub Secrets. "
             "Dapatkan di https://openrouter.ai/keys"
         )
-    from openai import OpenAI
+    from openai import OpenAI, RateLimitError, NotFoundError
     client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=api_key)
-    resp = client.chat.completions.create(
-        model=model,
-        messages=[{"role": "user", "content": prompt}],
-        temperature=temperature,
-        max_tokens=max_tokens,
+
+    # Susun daftar coba: model utama dulu, lalu cadangan (tanpa duplikat).
+    # KENAPA: tier gratis sering 429 (penuh) / 404 (model ditarik) — daripada
+    # run gagal total, coba model gratis lain secara otomatis.
+    candidates = [model] + [m for m in _FALLBACK_FREE_MODELS if m != model]
+    last_err = None
+    for cand in candidates:
+        try:
+            resp = client.chat.completions.create(
+                model=cand,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+            text = (resp.choices[0].message.content or "").strip()
+            if cand != model:
+                print(f"[LLM] fallback: {model} gagal, pakai {cand}", flush=True)
+            return text
+        except (RateLimitError, NotFoundError) as exc:
+            print(f"[LLM] {cand} tidak bisa dipakai ({type(exc).__name__}), coba berikutnya...",
+                  flush=True)
+            last_err = exc
+    raise RuntimeError(
+        f"Semua model gratis habis/tidak tersedia. Terakhir: {last_err}"
     )
-    return (resp.choices[0].message.content or "").strip()
 
 
 # Peta provider → fungsi pengirimnya. Nambah provider baru = tambah 1 baris + 1 fungsi.
