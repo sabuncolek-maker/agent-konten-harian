@@ -6,7 +6,11 @@ niche: facts
 description: "Konten fakta unik flora, fauna, dan alam Indonesia"
 
 llm:
-  model: "openai/gpt-oss-120b:free"
+  # model: kosongkan ("") agar DINAMIS:
+  #   1. pakai secret LLM_MODEL kalau diisi,
+  #   2. kalau tidak, pakai default per provider (lihat agent/brain.py _DEFAULT_MODELS).
+  # Isi manual hanya kalau niche ini butuh model khusus, misal "openai/gpt-oss-120b:free".
+  model: ""
   temperature: 0.8
   max_tokens: 1500
 
