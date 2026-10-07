@@ -162,10 +162,22 @@ def ask(prompt: str, model: str = "", temperature: float = 0.7,
         RuntimeError: kalau provider tidak dikenal, API key belum diset,
             atau LLM mengembalikan teks kosong.
     """
+    import time
     provider = _get_provider()
     use_model = model.strip() or _get_model(provider)
     print(f"[LLM] {provider}/{use_model} ...", flush=True)
-    text = _SENDER[provider](prompt, use_model, temperature, max_tokens)
+    # Retry kalau model mengembalikan jawaban kosong (umum saat load tinggi).
+    # KENAPA di sini (bukan per-modul): satu perbaikan melindungi semua tahap
+    # (research, generate, verify) tanpa ubah kode mereka masing-masing.
+    text = ""
+    for attempt in range(3):
+        text = _SENDER[provider](prompt, use_model, temperature, max_tokens)
+        if text.strip():
+            break
+        print(f"[LLM] jawaban kosong, coba lagi ({attempt + 1}/3)...", flush=True)
+        time.sleep(5)
+    if not text.strip():
+        raise RuntimeError(f"Model {use_model} mengembalikan jawaban kosong 3x berturut-turut.")
     if not text:
         raise RuntimeError(f"Model {use_model} mengembalikan jawaban kosong.")
     print(f"[LLM] {use_model} OK ({len(text)} karakter)", flush=True)
