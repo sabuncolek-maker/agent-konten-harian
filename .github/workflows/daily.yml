@@ -1,0 +1,49 @@
+name: Daily Content Agent
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 07:00 WIB = 00:00 UTC
+    - cron: "0 0 * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  run-agent:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          playwright install chromium
+
+      - name: Validate Python syntax
+        run: python -m compileall -q agent niches tools main.py
+
+      - name: Run agent (quotes)
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          IG_USER_ID: ${{ secrets.IG_USER_ID }}
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+          IMGBB_API_KEY: ${{ secrets.IMGBB_API_KEY }}
+        run: python main.py --config config/quotes.yaml
+
+      - name: Simpan memory
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git pull --rebase origin main
+          git add data/memory.json
+          if git diff --cached --quiet; then
+            echo "Tidak ada perubahan memory."
+          else
+            git commit -m "chore: simpan memory agent"
+            git push
+          fi
