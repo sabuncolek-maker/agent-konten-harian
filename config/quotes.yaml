@@ -50,6 +50,11 @@ content:
     - "#tokohindonesia"
     - "#motivasi"
 
+# Verifikasi: coba ulang dengan tokoh lain kalau ditolak (ide A).
+# KENAPA ada di config: jumlah percobaan itu kebijakan, bukan logika program.
+verification:
+  max_retries: 2  # total tokoh dicoba = 1 + 2 = 3
+
 # Evaluasi: konten harus skor >= 75 baru boleh dipublish
 evaluation:
   min_score: 75
