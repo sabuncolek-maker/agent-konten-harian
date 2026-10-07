@@ -8,61 +8,66 @@ from agent import brain
 
 
 def run(state, cfg, memory) -> None:
-    """Pilih topik & tokoh. Melewati tokoh yang sudah pernah dipakai."""
+    """Pilih kutipan dari bank terverifikasi (bukan dari LLM).
+
+    KENAPA dari bank: LLM terbukti tidak bisa diandalkan untuk mengingat
+    kutipan verbatim — 3 tokoh berbeda semua gagal verifikasi karena salah
+    atribusi (John Dewey dikira Ki Hajar Dewantara, parafrasa diklaim asli).
+    Bank berisi kutipan yang sudah dipastikan benar, jadi tahap generate
+    tinggal membungkusnya dengan slide yang menarik.
+    """
+    import json
+    import os
     import random
-    used = [s.lower() for s in memory["used_subjects"]]
-    # Ide A: hindari juga tokoh yang ditolak verifikasi di run ini.
-    # KENAPA: tanpa ini, retry bisa memilih tokoh yang sama berulang-ulang.
-    rejected = [s.lower() for s in getattr(state, "rejected_subjects", [])]
-    banned = used + rejected
 
-    # Baca mood dari config (default: serius, sesuai perilaku lama).
-    # KENAPA ada mood: tidak semua hari cocok untuk topik berat — kadang
-    # konten ringan/fun lebih cocok untuk akun pribadi.
-    mood = cfg.get("research", {}).get("mood", "serius").strip().lower()
-    if mood == "campuran":
-        mood = random.choice(["serius", "ringan"])
-    print(f"[RESEARCH] mood: {mood}", flush=True)
+    # Baca scope dari config: indonesia | internasional | campuran
+    scope = cfg.get("quotes", {}).get("scope", "campuran").strip().lower()
 
-    if mood == "ringan":
-        brief = (
-            "Pilih SATU topik RINGAN dan fun seputar tokoh Indonesia: kisah unik, "
-            "fakta menarik, kebiasaan lucu, atau pelajaran hidup yang ringan dan "
-            "menghibur. Hindari isu berat/politik/konflik. "
-        )
-    else:  # serius
-        brief = (
-            "Pilih SATU isu sosial/masyarakat Indonesia yang sedang relevan saat ini. "
-        )
+    # Cari file bank (relatif terhadap root repo)
+    bank_path = os.path.join(os.path.dirname(os.path.dirname(
+        os.path.dirname(os.path.abspath(__file__)))), "data", "quotes_verified.json")
+    with open(bank_path, encoding="utf-8") as f:
+        bank = json.load(f)
 
-    prompt = (
-        "Kamu adalah riset editor media Indonesia. "
-        + brief +
-        "lalu pilih SATU tokoh Indonesia (pahlawan, budayawan, ulama, ilmuwan, "
-        "atau negarawan) yang pemikirannya relevan dengan topik itu.\n\n"
-        "Jawab HANYA dalam format JSON valid, tanpa teks lain:\n"
-        '{"topic": "<topik dalam 1 kalimat>", "person": "<nama tokoh>", '
-        '"reason": "<kenapa relevan, 1 kalimat>"}'
-    )
-    raw = brain.ask(prompt, model=cfg["llm"]["model"],
-                    temperature=cfg["llm"]["temperature"])
+    # Filter scope
+    if scope in ("indonesia", "internasional"):
+        pool = [q for q in bank if q["scope"] == scope]
+    else:  # campuran atau tidak dikenal → semua
+        pool = bank
+    if scope == "campuran":
+        print(f"[RESEARCH] scope: campuran ({len(pool)} kutipan)", flush=True)
+    else:
+        print(f"[RESEARCH] scope: {scope} ({len(pool)} kutipan)", flush=True)
 
-    data = _parse_json(raw, ["topic", "person"])
+    # Hindari yang sudah pernah dipakai (memory) + ditolak di run ini
+    used = set(s.lower() for s in memory.get("used_subjects", []))
+    rejected = set(s.lower() for s in getattr(state, "rejected_subjects", []))
+    # KENAPA hindari per kutipan (bukan per tokoh): satu tokoh bisa punya
+    # beberapa kutipan di bank, jadi yang dihindari adalah kutipan spesifik.
+    used_quotes = set(s.lower() for s in memory.get("used_quotes", []))
+    candidates = [q for q in pool
+                  if q["quote"].lower() not in used_quotes
+                  and q["figure"].lower() not in rejected]
+    if not candidates:
+        # Semua sudah dipakai → reset, pakai semua lagi kecuali yang ditolak
+        print("[RESEARCH] semua kutipan sudah pernah dipakai, mulai dari awal",
+              flush=True)
+        candidates = [q for q in pool if q["figure"].lower() not in rejected]
+    if not candidates:
+        raise RuntimeError("Tidak ada kutipan tersisa di bank untuk scope ini.")
 
-    # Anti-duplikat: kalau tokoh sudah dipakai, minta LLM pilih yang lain (maks 3x).
-    # KENAPA: tanpa ini, agent bisa posting tokoh yang sama berulang-ulang.
-    for _ in range(3):
-        if data["person"].strip().lower() not in banned:
-            break
-        raw = brain.ask(
-            prompt + f"\n\nPENTING: jangan pilih {data['person']}, sudah pernah dipakai. Pilih tokoh lain.",
-            model=cfg["llm"]["model"], temperature=cfg["llm"]["temperature"],
-        )
-        data = _parse_json(raw, ["topic", "person"])
-
-    state.topic = data["topic"]
-    state.subject = data["person"]
-    print(f"[RESEARCH] topik: {state.topic} | tokoh: {state.subject}", flush=True)
+    pick = random.choice(candidates)
+    state.topic = pick.get("theme", "")
+    state.subject = pick["figure"]
+    # Simpan data kutipan untuk dipakai tahap generate & verify
+    state.verified_quote = pick["quote"]
+    state.quote_honorific = pick.get("honorific", pick["figure"])
+    state.quote_context = pick.get("context", "")
+    # Tandai kutipan ini sudah dipakai agar tidak diulang
+    used_quotes.add(pick["quote"].lower())
+    memory["used_quotes"] = sorted(used_quotes)
+    print(f"[RESEARCH] kutipan: {pick['figure']} — \"{pick['quote'][:60]}...\"",
+          flush=True)
 
 
 def _parse_json(raw: str, required_keys: list) -> dict:
