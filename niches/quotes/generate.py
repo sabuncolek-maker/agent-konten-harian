@@ -17,20 +17,29 @@ def run(state, cfg, memory) -> None:
     # topik modern. Verifier akan menolaknya dan run jadi sia-sia.
     # Solusi: pakai kutipan asli yang memang dikenal luas, lalu KAITKAN ke
     # topik modern lewat penjelasan di slide — bukan dengan mengarang kutipan baru.
+    # Ambil kutipan terverifikasi dari state (diisi tahap research dari bank).
+    # KENAPA tidak minta LLM bikin kutipan: LLM terbukti mengarang atribusi.
+    quote = getattr(state, "verified_quote", "")
+    honorific = getattr(state, "quote_honorific", state.subject)
+    qcontext = getattr(state, "quote_context", "")
+    if not quote:
+        raise RuntimeError("Tidak ada kutipan terverifikasi di state. Research gagal?")
     prompt = (
         f"Kamu adalah content writer Instagram Indonesia.\n"
-        f"Topik: {state.topic}\nTokoh: {state.subject}\n\n"
+        f"KUTIPAN ASLI (JANGAN diubah, JANGAN diparafrasa, tulis persis seperti ini):\n"
+        f"\"{quote}\" — {honorific}\n"
+        f"Konteks kutipan: {qcontext}\n"
+        f"Tema: {state.topic}\n\n"
         f"Buat carousel {max_slides} slide tentang {state.subject}.\n"
         f"ATURAN WAJIB:\n"
-        f"1. Kutipan yang ditampilkan HARUS kutipan asli {state.subject} yang "
-        f"benar-benar dikenal luas (dari buku, pidato, atau tulisan resminya). "
-        f"DILARANG mengarang kutipan baru atau parafrasa bebas yang diklaim "
-        f"sebagai perkataannya.\n"
-        f"2. Kaitkan kutipan asli tersebut dengan topik di atas lewat "
-        f"penjelasanmu di slide-slide berikutnya — bukan dengan membuat "
-        f"kutipan palsu tentang topik modern.\n"
-        f"3. Slide 1 = hook yang memancing rasa penasaran. "
-        f"Slide terakhir = ajakan follow/refleksi.\n\n"
+        f"1. Kutipan di atas SUDAH terverifikasi benar — tulis PERSIS seperti itu, "
+        f"jangan diubah atau diparafrasa.\n"
+        f"2. Slide 1 = hook yang memancing rasa penasaran (jangan langsung "
+        f"tampilkan kutipannya).\n"
+        f"3. Slide 2 = tampilkan kutipan persis + nama {honorific}.\n"
+        f"4. Slide 3-4 = jelaskan makna kutipan dan kaitannya dengan kehidupan "
+        f"sehari-hari, dengan bumbu puitis/filosofis/humor yang sopan.\n"
+        f"5. Slide terakhir = ajakan follow/refleksi yang ringan.\n\n"
         "Jawab HANYA JSON valid, tanpa teks lain:\n"
         '{"slides": ["<teks slide 1>", "<teks slide 2>", ...], '
         '"caption": "<caption Instagram + 3 hashtag>"}'
