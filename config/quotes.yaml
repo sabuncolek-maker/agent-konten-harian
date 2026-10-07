@@ -22,6 +22,13 @@ research:
   # ringan : topik fun — kisah unik tokoh, fakta menarik, pelajaran hidup yang ringan
   # campuran: acak setiap run, kadang serius kadang ringan
 
+# Bank kutipan terverifikasi — tokoh Indonesia saja atau campur internasional?
+# KENAPA: kutipan tokoh internasional (Einstein, Gandhi, Mandela) terdokumentasi
+# jauh lebih luas → LLM lebih jarang salah atribusi dibanding tokoh lokal.
+quotes:
+  scope: "campuran"  # pilihan: "indonesia" | "internasional" | "campuran"
+  bank_file: "data/quotes_verified.json"
+
 # Aturan pipeline: urutan langkah yang dijalankan orchestrator
 # Setiap langkah = nama modul di niches/quotes/
 pipeline:
