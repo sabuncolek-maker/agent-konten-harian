@@ -20,6 +20,27 @@ def run(state, cfg, memory) -> None:
     """Verifikasi tiap slide yang mengandung klaim kutipan."""
     full_text = "\n".join(state.slides)
 
+    # FAST-PATH: kutipan dari bank sudah terverifikasi kebenarannya.
+    # KENAPA tidak pakai LLM di sini: verifier LLM bersikap "ragu = tolak",
+    # sehingga bisa menolak kutipan bank yang valid (false negative).
+    # Cukup pastikan LLM tidak mengubah kutipan saat generate.
+    bank_quote = getattr(state, "verified_quote", "") or ""
+    if bank_quote.strip():
+        norm_q = " ".join(bank_quote.split())
+        norm_t = " ".join(full_text.split())
+        if norm_q in norm_t:
+            state.verification = "VERIFIED"
+            print("[VERIFY] lolos (kutipan bank muncul persis di slide)", flush=True)
+        else:
+            state.verification = (
+                "REJECTED: kutipan bank tidak muncul persis di slide "
+                "(kemungkinan diubah/diparafrasa saat generate)"
+            )
+            print(f"[VERIFY] DITOLAK: {state.verification}", flush=True)
+        return
+
+    # FALLBACK: verifikasi LLM untuk alur non-bank (atau bank kosong).
+
     # Langkah 1: minta LLM memeriksa dirinya sendiri dengan peran berbeda.
     # KENAPA 2 peran: LLM yang menulis cenderung "membela" tulisannya sendiri.
     # Verifikator independen (prompt berbeda) lebih objektif.
