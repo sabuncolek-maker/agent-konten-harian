@@ -24,3 +24,4 @@ class AgentState:
     score: int = 0             # skor evaluasi 0-100
     published: bool = False    # True HANYA jika publisher return True
     error: str = ""            # pesan error kalau pipeline gagal di tengah
+    rejected_subjects: list = field(default_factory=list)  # tokoh yang ditolak verifikasi di run ini (ide A)
