@@ -1,0 +1,122 @@
+[
+  {
+    "figure": "Ir. Soekarno",
+    "honorific": "Pak Karno",
+    "scope": "indonesia",
+    "quote": "Beri aku 1.000 orang tua, niscaya akan kucabut Semeru dari akarnya. Beri aku 10 pemuda, niscaya akan kuguncangkan dunia.",
+    "context": "Pidato tentang kekuatan pemuda Indonesia",
+    "theme": "semangat pemuda"
+  },
+  {
+    "figure": "Ir. Soekarno",
+    "honorific": "Pak Karno",
+    "scope": "indonesia",
+    "quote": "Jas Merah: Jangan sekali-kali meninggalkan sejarah.",
+    "context": "Pesan tentang pentingnya mengingat sejarah bangsa",
+    "theme": "sejarah"
+  },
+  {
+    "figure": "Ki Hajar Dewantara",
+    "honorific": "Pak Hajar",
+    "scope": "indonesia",
+    "quote": "Ing ngarsa sung tuladha, ing madya mangun karsa, tut wuri handayani.",
+    "quote_id": "Di depan memberi teladan, di tengah membangun semangat, di belakang memberi dorongan.",
+    "context": "Semboyan pendidikan Indonesia dari Taman Siswa",
+    "theme": "pendidikan"
+  },
+  {
+    "figure": "B.J. Habibie",
+    "honorific": "Pak Habibie",
+    "scope": "indonesia",
+    "quote": "Kita harus berani bermimpi, karena mimpi adalah awal dari segala pencapaian.",
+    "context": "Pesan beliau tentang keberanian bermimpi besar",
+    "theme": "mimpi dan kerja keras"
+  },
+  {
+    "figure": "Mohammad Hatta",
+    "honorific": "Pak Hatta",
+    "scope": "indonesia",
+    "quote": "Indonesia tidak akan bercahaya karena obor besar di Jakarta, tapi akan bercahaya karena lilin-lilin di desa.",
+    "context": "Pesan tentang pemerataan pembangunan",
+    "theme": "pemerataan"
+  },
+  {
+    "figure": "Tan Malaka",
+    "honorific": "Pak Tan",
+    "scope": "indonesia",
+    "quote": "Idealisme adalah kemewahan terakhir yang hanya dimiliki oleh pemuda.",
+    "context": "Dari tulisannya tentang semangat kepemudaan",
+    "theme": "idealisme pemuda"
+  },
+  {
+    "figure": "R.A. Kartini",
+    "honorific": "Ibu Kartini",
+    "scope": "indonesia",
+    "quote": "Habis gelap terbitlah terang.",
+    "context": "Judul kumpulan surat-surat beliau yang menjadi simbol emansipasi",
+    "theme": "harapan dan perjuangan"
+  },
+  {
+    "figure": "Albert Einstein",
+    "honorific": "Einstein",
+    "scope": "internasional",
+    "quote": "Imajinasi lebih penting daripada pengetahuan.",
+    "quote_original": "Imagination is more important than knowledge.",
+    "context": "Wawancara dengan The Saturday Evening Post, 1929",
+    "theme": "imajinasi dan kreativitas"
+  },
+  {
+    "figure": "Albert Einstein",
+    "honorific": "Einstein",
+    "scope": "internasional",
+    "quote": "Hidup itu seperti mengendarai sepeda. Agar tetap seimbang, kamu harus terus bergerak.",
+    "quote_original": "Life is like riding a bicycle. To keep your balance, you must keep moving.",
+    "context": "Surat kepada putranya, Eduard Einstein, 1930",
+    "theme": "ketekunan"
+  },
+  {
+    "figure": "Nelson Mandela",
+    "honorific": "Mandela",
+    "scope": "internasional",
+    "quote": "Selalu terlihat mustahil sampai semuanya selesai.",
+    "quote_original": "It always seems impossible until it's done.",
+    "context": "Pesan tentang ketekunan menghadapi tantangan besar",
+    "theme": "ketekunan"
+  },
+  {
+    "figure": "Mahatma Gandhi",
+    "honorific": "Gandhi",
+    "scope": "internasional",
+    "quote": "Jadilah perubahan yang ingin kamu lihat di dunia.",
+    "quote_original": "Be the change that you wish to see in the world.",
+    "context": "Parafrasa terkenal dari ajaran beliau tentang perubahan diri",
+    "theme": "perubahan diri"
+  },
+  {
+    "figure": "Steve Jobs",
+    "honorific": "Steve Jobs",
+    "scope": "internasional",
+    "quote": "Tetaplah lapar, tetaplah bodoh.",
+    "quote_original": "Stay hungry, stay foolish.",
+    "context": "Pidato wisuda Stanford University, 2005",
+    "theme": "rasa ingin tahu"
+  },
+  {
+    "figure": "Konfusius",
+    "honorific": "Konfusius",
+    "scope": "internasional",
+    "quote": "Tidak masalah seberapa lambat kamu berjalan, selama kamu tidak berhenti.",
+    "quote_original": "It does not matter how slowly you go as long as you do not stop.",
+    "context": "Ajaran filosofis tentang ketekunan",
+    "theme": "ketekunan"
+  },
+  {
+    "figure": "Wright Bersaudara",
+    "honorific": "Wright Bersaudara",
+    "scope": "internasional",
+    "quote": "Jika kita bekerja dengan asumsi bahwa apa yang diterima sebagai kebenaran itu memang benar, maka hanya akan ada sedikit ruang untuk kemajuan.",
+    "quote_original": "If we worked on the assumption that what is accepted as true really is true, then there would be little hope for advance.",
+    "context": "Tentang keberanian mempertanyakan kemapanan dalam inovasi",
+    "theme": "inovasi"
+  }
+]
