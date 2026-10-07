@@ -7,7 +7,11 @@ description: "Konten kutipan tokoh Indonesia yang relevan dengan kondisi saat in
 
 # LLM yang dipakai untuk niche ini
 llm:
-  model: "openai/gpt-oss-120b:free"
+  # model: kosongkan ("") agar DINAMIS:
+  #   1. pakai secret LLM_MODEL kalau diisi,
+  #   2. kalau tidak, pakai default per provider (lihat agent/brain.py _DEFAULT_MODELS).
+  # Isi manual hanya kalau niche ini butuh model khusus, misal "openai/gpt-oss-120b:free".
+  model: ""
   temperature: 0.7
   max_tokens: 1500
 
