@@ -9,15 +9,35 @@ from agent import brain
 
 def run(state, cfg, memory) -> None:
     """Pilih topik & tokoh. Melewati tokoh yang sudah pernah dipakai."""
+    import random
     used = [s.lower() for s in memory["used_subjects"]]
+
+    # Baca mood dari config (default: serius, sesuai perilaku lama).
+    # KENAPA ada mood: tidak semua hari cocok untuk topik berat — kadang
+    # konten ringan/fun lebih cocok untuk akun pribadi.
+    mood = cfg.get("research", {}).get("mood", "serius").strip().lower()
+    if mood == "campuran":
+        mood = random.choice(["serius", "ringan"])
+    print(f"[RESEARCH] mood: {mood}", flush=True)
+
+    if mood == "ringan":
+        brief = (
+            "Pilih SATU topik RINGAN dan fun seputar tokoh Indonesia: kisah unik, "
+            "fakta menarik, kebiasaan lucu, atau pelajaran hidup yang ringan dan "
+            "menghibur. Hindari isu berat/politik/konflik. "
+        )
+    else:  # serius
+        brief = (
+            "Pilih SATU isu sosial/masyarakat Indonesia yang sedang relevan saat ini. "
+        )
 
     prompt = (
         "Kamu adalah riset editor media Indonesia. "
-        "Pilih SATU isu sosial/masyarakat Indonesia yang sedang relevan saat ini, "
+        + brief +
         "lalu pilih SATU tokoh Indonesia (pahlawan, budayawan, ulama, ilmuwan, "
-        "atau negarawan) yang pemikirannya relevan dengan isu itu.\n\n"
+        "atau negarawan) yang pemikirannya relevan dengan topik itu.\n\n"
         "Jawab HANYA dalam format JSON valid, tanpa teks lain:\n"
-        '{"topic": "<isu dalam 1 kalimat>", "person": "<nama tokoh>", '
+        '{"topic": "<topik dalam 1 kalimat>", "person": "<nama tokoh>", '
         '"reason": "<kenapa relevan, 1 kalimat>"}'
     )
     raw = brain.ask(prompt, model=cfg["llm"]["model"],
