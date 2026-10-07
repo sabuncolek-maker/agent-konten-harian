@@ -34,10 +34,13 @@ def main() -> int:
     if state.error:
         print(f"Catatan    : {state.error}")
 
-    # Exit code 0 = run selesai normal (termasuk konten ditolak verifikasi).
-    # Exit code 1 = error tak terduga. KENAPA dibedakan: supaya GitHub Actions
-    # bisa membedakan "tidak ada konten hari ini (normal)" vs "ada yang rusak".
-    return 0 if not state.error or "ditolak" in state.error.lower() or "gagal" in state.error.lower() else 1
+    # Exit code 0 = run selesai normal: sukses ATAU verifikasi ditolak
+    # (tidak ada konten hari ini = kondisi normal, bukan error).
+    # Exit code 1 = ada yang perlu perhatian: publish gagal, skor rendah,
+    # atau error tak terduga. KENAPA "gagal" sekarang = 1: sebelumnya kata
+    # "gagal" ikut dianggap sukses, sehingga "Publish gagal" tidak terlihat
+    # sebagai kegagalan di GitHub Actions (bug yang ditemukan saat audit).
+    return 0 if not state.error or "ditolak" in state.error.lower() else 1
 
 
 if __name__ == "__main__":
