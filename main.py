@@ -15,7 +15,16 @@ import sys
 from agent.orchestrator import run
 
 
+# KILL SWITCH: False = agent PAUSE (tidak jalan walau workflow trigger).
+# Ubah ke True untuk mengaktifkan kembali. Dipause atas perintah Indra (8 Okt 2026).
+AGENT_ENABLED = False
+
+
 def main() -> int:
+    if not AGENT_ENABLED:
+        print("AGENT DIPAUSE: AGENT_ENABLED=False. Tidak ada konten dibuat/diposting.")
+        print("Ubah AGENT_ENABLED=True di main.py untuk mengaktifkan kembali.")
+        return 0
     parser = argparse.ArgumentParser(description="AI Content Agent multi-niche")
     parser.add_argument(
         "--config", required=True,
